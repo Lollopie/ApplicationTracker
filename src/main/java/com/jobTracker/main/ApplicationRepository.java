@@ -1,4 +1,4 @@
-package com.jobTracker.main;
+package com.jobtracker.main;
 
 import org.springframework.stereotype.Repository;
 
@@ -22,7 +22,7 @@ public class ApplicationRepository {
     public Optional<Application> getApplicationById(UUID id) {
         return Optional.ofNullable(applications.get(id));
     }
-    synchronized public Optional<Application> putApplication(UUID id, Application application) {
+    public Optional<Application> putApplication(UUID id, Application application) {
         return Optional.ofNullable(applications.put(id, application));
     }
     public Optional<Application> deleteApplication(UUID id) {

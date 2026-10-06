@@ -1,5 +1,4 @@
-package com.jobTracker.main;
-import org.springframework.beans.factory.annotation.Autowired;
+package com.jobtracker.main;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -9,12 +8,14 @@ import java.util.UUID;
 @Service
 public class ApplicationService {
     private final ApplicationRepository applicationRepository;
-    @Autowired
     public ApplicationService(ApplicationRepository applicationRepository) {
         this.applicationRepository = applicationRepository;
     }
-    public void saveApplication(Application application) {
+    public Application saveApplication(ApplicationDto applicationDto) {
+        Application application = new Application(applicationDto.company(), applicationDto.position(), applicationDto.status(),
+                applicationDto.notes(), applicationDto.links(), UUID.randomUUID());
         applicationRepository.saveApplication(application);
+        return application;
     }
     public List<Application> getApplications() {
         return applicationRepository.getApplications();
@@ -22,7 +23,9 @@ public class ApplicationService {
     public Optional<Application> getApplicationById(UUID id) {
         return applicationRepository.getApplicationById(id);
     }
-    public Optional<Application> putApplication(UUID id, Application application) {
+    public Optional<Application> putApplication(UUID id, ApplicationDto applicationDto) {
+        Application application = new Application(applicationDto.company(), applicationDto.position(), applicationDto.status(),
+                applicationDto.notes(), applicationDto.links(), id);
         return applicationRepository.putApplication(id, application);
     }
     public Optional<Application> deleteApplication(UUID id) {

@@ -1,4 +1,4 @@
-package com.jobTracker.main;
+package com.jobtracker.main;
 
 import java.util.UUID;
 
