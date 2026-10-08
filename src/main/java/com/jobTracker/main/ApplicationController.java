@@ -1,47 +1,48 @@
 package com.jobtracker.main;
 
-import org.springframework.beans.factory.annotation.Value;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/applications")
 public class ApplicationController  {
-
+    private ResponseStatusException createResponseStatusException(){
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, "Application Not Found");
+    }
     private final ApplicationService applicationService;
     public ApplicationController(ApplicationService applicationService) {
         this.applicationService = applicationService;
     }
     @PostMapping
-    public ResponseEntity<Application> createApplication(@RequestBody ApplicationDto applicationDto) {
-        Application application = applicationService.saveApplication(applicationDto);
+    public ResponseEntity<ApplicationResponseDto> createApplication(@Valid @RequestBody ApplicationDto applicationDto) {
+        ApplicationResponseDto application = applicationService.saveApplication(applicationDto);
         return ResponseEntity.created(URI.create("/applications/" + application.id())).body(application);
     }
     @GetMapping
-    public List<Application> listApplications() {
+    public List<ApplicationResponseDto> listApplications() {
         return applicationService.getApplications();
     }
     @GetMapping("{id}")
-    public ResponseEntity<Application> getApplicationById(@PathVariable UUID id) {
-        Optional<Application> applicationOptional = applicationService.getApplicationById(id);
-        return ResponseEntity.of(applicationOptional);
+    public ResponseEntity<ApplicationResponseDto> getApplicationById(@PathVariable UUID id) {
+        return applicationService.getApplicationById(id).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
     }
     @PutMapping("{id}")
-    public ResponseEntity<Application> putApplication(@PathVariable UUID id, @RequestBody ApplicationDto applicationDto) {
-        Optional<Application> application = applicationService.putApplication(id, applicationDto);
-        return ResponseEntity.of(application);
+    public ResponseEntity<ApplicationResponseDto> putApplication(@PathVariable UUID id, @Valid @RequestBody ApplicationDto applicationDto) {
+        return applicationService.putApplication(id, applicationDto).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
     }
     @DeleteMapping("{id}")
     public ResponseEntity<Void> deleteApplication(@PathVariable UUID id) {
-        Optional<Application> deletedApplication = applicationService.deleteApplication(id);
-        if (deletedApplication.isPresent()) {
+        boolean success = applicationService.deleteApplication(id);
+        if (success) {
             return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.notFound().build();
+        throw createResponseStatusException();
     }
 }

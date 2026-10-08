@@ -1,5 +1,6 @@
 package com.jobtracker.main;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -11,24 +12,40 @@ public class ApplicationService {
     public ApplicationService(ApplicationRepository applicationRepository) {
         this.applicationRepository = applicationRepository;
     }
-    public Application saveApplication(ApplicationDto applicationDto) {
+
+    private ApplicationResponseDto getResponse(Application application) {
+        return new ApplicationResponseDto(application.getApplicationId(), application.getCompany(), application.getPosition(),
+                application.getStatus(), application.getNotes(), application.getLinks());
+    }
+
+    public ApplicationResponseDto saveApplication(ApplicationDto applicationDto) {
         Application application = new Application(applicationDto.company(), applicationDto.position(), applicationDto.status(),
-                applicationDto.notes(), applicationDto.links(), UUID.randomUUID());
-        applicationRepository.saveApplication(application);
-        return application;
+                applicationDto.notes(), applicationDto.links());
+        application = applicationRepository.save(application);
+        return getResponse(application);
     }
-    public List<Application> getApplications() {
-        return applicationRepository.getApplications();
+    public List<ApplicationResponseDto> getApplications() {
+        return applicationRepository.findAll().stream().map(this::getResponse).toList();
     }
-    public Optional<Application> getApplicationById(UUID id) {
-        return applicationRepository.getApplicationById(id);
+    public Optional<ApplicationResponseDto> getApplicationById(UUID id) {
+        return applicationRepository.findById(id).map(this::getResponse);
     }
-    public Optional<Application> putApplication(UUID id, ApplicationDto applicationDto) {
-        Application application = new Application(applicationDto.company(), applicationDto.position(), applicationDto.status(),
-                applicationDto.notes(), applicationDto.links(), id);
-        return applicationRepository.putApplication(id, application);
+    @Transactional
+    public Optional<ApplicationResponseDto> putApplication(UUID id, ApplicationDto applicationDto) {
+        return applicationRepository.findById(id)
+                .map(application ->
+                    getResponse(
+                            application.updateApplication(
+                                    applicationDto.company(), applicationDto.position(), applicationDto.status(),
+                                    applicationDto.notes(), applicationDto.links()
+                            )
+                    )
+                );
     }
-    public Optional<Application> deleteApplication(UUID id) {
-        return applicationRepository.deleteApplication(id);
+    @Transactional
+    public boolean deleteApplication(UUID id) {
+        Optional<Application> previousApplication = applicationRepository.findById(id);
+        previousApplication.ifPresent(applicationRepository::delete);
+        return previousApplication.isPresent();
     }
 }
