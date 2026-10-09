@@ -1,14 +1,15 @@
 package com.jobtracker.main;
 
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -90,7 +91,7 @@ public class ApplicationControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("detail").value("Application Not Found"))
                 .andExpect(jsonPath("instance").value(url))
-                .andExpect(jsonPath("status").value("404"))
+                .andExpect(jsonPath("status").value(HttpStatus.NOT_FOUND.value()))
                 .andExpect(jsonPath("title").value("Not Found"));
         verify(applicationService, times(1)).getApplicationById(id);
     }
@@ -106,16 +107,20 @@ public class ApplicationControllerTest {
         UUID id = UUID.fromString("01a1168a-fe8a-7df8-8228-0158fcc22d99");
         ApplicationDto applicationDto = new ApplicationDto("X", "Y", ApplicationStatus.SAVED, null, null);
         ApplicationResponseDto applicationResponseDto = new ApplicationResponseDto(id, "X", "Y",
-                ApplicationStatus.SAVED, null, null);
+                null, null, List.of(new ChangeStatusResponseDto(ApplicationStatus.SAVED, StatusChangeCause.MANUAL, "", Instant.now())));
         when(applicationService.saveApplication(applicationDto)).thenReturn(applicationResponseDto);
         mockMvc.perform(post("/applications").contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isCreated())
+                .andExpect(header().string("Location", "/applications/" + id))
                 .andExpect(jsonPath("id").value(id.toString()))
                 .andExpect(jsonPath("company").value("X"))
                 .andExpect(jsonPath("position").value("Y"))
-                .andExpect(jsonPath("status").value("SAVED"))
                 .andExpect(jsonPath("notes").doesNotExist())
-                .andExpect(jsonPath("links").doesNotExist());
+                .andExpect(jsonPath("links").doesNotExist())
+                .andExpect(jsonPath("statusHistory[0].status").value("SAVED"))
+                .andExpect(jsonPath("statusHistory[0].cause").value("MANUAL"))
+                .andExpect(jsonPath("statusHistory[0].detail").value(""))
+                .andExpect(jsonPath("statusHistory[0].createdAt").exists());
         verify(applicationService, times(1)).saveApplication(applicationDto);
     }
 

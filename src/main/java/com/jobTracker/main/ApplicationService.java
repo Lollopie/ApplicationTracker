@@ -14,10 +14,13 @@ public class ApplicationService {
     }
 
     private ApplicationResponseDto getResponse(Application application) {
+        List<ChangeStatusResponseDto> statusChanges = application.getStatusChanges().stream()
+                .map(statusChange -> new ChangeStatusResponseDto(statusChange.getStatus(),
+                        statusChange.getCause(), statusChange.getDetail(), statusChange.getCreatedAt())).toList();
         return new ApplicationResponseDto(application.getApplicationId(), application.getCompany(), application.getPosition(),
-                application.getStatus(), application.getNotes(), application.getLinks());
+                application.getNotes(), application.getLinks(), statusChanges);
     }
-
+    @Transactional
     public ApplicationResponseDto saveApplication(ApplicationDto applicationDto) {
         Application application = new Application(applicationDto.company(), applicationDto.position(), applicationDto.status(),
                 applicationDto.notes(), applicationDto.links());
@@ -25,10 +28,10 @@ public class ApplicationService {
         return getResponse(application);
     }
     public List<ApplicationResponseDto> getApplications() {
-        return applicationRepository.findAll().stream().map(this::getResponse).toList();
+        return applicationRepository.getApplications().stream().map(this::getResponse).toList();
     }
     public Optional<ApplicationResponseDto> getApplicationById(UUID id) {
-        return applicationRepository.findById(id).map(this::getResponse);
+        return applicationRepository.getApplicationById(id).map(this::getResponse);
     }
     @Transactional
     public Optional<ApplicationResponseDto> putApplication(UUID id, ApplicationDto applicationDto) {
@@ -36,16 +39,22 @@ public class ApplicationService {
                 .map(application ->
                     getResponse(
                             application.updateApplication(
-                                    applicationDto.company(), applicationDto.position(), applicationDto.status(),
-                                    applicationDto.notes(), applicationDto.links()
+                                    applicationDto.company(), applicationDto.position(), applicationDto.notes(), applicationDto.links()
                             )
                     )
                 );
     }
-    @Transactional
+    @Transactional()
     public boolean deleteApplication(UUID id) {
         Optional<Application> previousApplication = applicationRepository.findById(id);
         previousApplication.ifPresent(applicationRepository::delete);
         return previousApplication.isPresent();
+    }
+    @Transactional
+    public Optional<ApplicationResponseDto> changeStatus(UUID applicationId, ChangeStatusDto statusDto) {
+        return applicationRepository.getLockedApplicationById(applicationId).map(application -> {
+                    application.changeStatus(statusDto.status());
+                    return getResponse(application);
+                });
     }
 }

@@ -37,6 +37,10 @@ public class ApplicationController  {
     public ResponseEntity<ApplicationResponseDto> putApplication(@PathVariable UUID id, @Valid @RequestBody ApplicationDto applicationDto) {
         return applicationService.putApplication(id, applicationDto).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
     }
+    @PostMapping("{id}/status")
+    public ResponseEntity<ApplicationResponseDto> changeStatus(@PathVariable UUID id, @Valid @RequestBody ChangeStatusDto changeStatusDto) {
+        return applicationService.changeStatus(id, changeStatusDto).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
+    }
     @DeleteMapping("{id}")
     public ResponseEntity<Void> deleteApplication(@PathVariable UUID id) {
         boolean success = applicationService.deleteApplication(id);
