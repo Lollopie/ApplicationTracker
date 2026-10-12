@@ -38,7 +38,8 @@ public class ApplicationStatusUnitTest {
 
     @Test
     public void testApplicationUsesPassedStatus() {
-        Application application = new Application("X", "Y", ApplicationStatus.APPLIED, "", "");
+        User user = new User("A", "B");
+        Application application = new Application("X", "Y", ApplicationStatus.APPLIED, "", "", user);
         List<StatusChange> statusChanges = application.getStatusChanges();
         assertNotNull(statusChanges);
         assertFalse(statusChanges.isEmpty());
@@ -48,7 +49,8 @@ public class ApplicationStatusUnitTest {
     }
     @Test
     public void testApplicationImmediateStatusChange() {
-        Application application = new Application("X", "Y", ApplicationStatus.SAVED, "", "");
+        User user = new User("A", "B");
+        Application application = new Application("X", "Y", ApplicationStatus.SAVED, "", "", user);
         application.changeStatus(ApplicationStatus.APPLIED);
         assertEquals(ApplicationStatus.APPLIED, application.getStatusChanges().getLast().getStatus());
     }

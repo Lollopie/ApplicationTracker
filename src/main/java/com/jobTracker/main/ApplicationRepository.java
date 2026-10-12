@@ -10,11 +10,11 @@ import java.util.UUID;
 import java.util.List;
 
 public interface ApplicationRepository extends JpaRepository<Application, UUID> {
-    @Query("SELECT a FROM Application a LEFT JOIN FETCH a.statusChanges")
-    List<Application> getApplications();
-    @Query("SELECT a FROM Application a LEFT JOIN FETCH a.statusChanges where a.applicationId = ?1")
-    Optional<Application> getApplicationById(UUID id);
+    @Query("SELECT a FROM Application a LEFT JOIN FETCH a.statusChanges WHERE a.user.id = ?1")
+    List<Application> getApplicationsByOwner(UUID userId);
+    @Query("SELECT a FROM Application a LEFT JOIN FETCH a.statusChanges WHERE a.applicationId = ?1 AND a.user.id = ?2")
+    Optional<Application> getApplicationByIdAndOwner(UUID id, UUID userId);
     @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
-    @Query("SELECT a FROM Application a where a.applicationId = ?1")
-    Optional<Application> getLockedApplicationById(UUID id);
+    @Query("SELECT a FROM Application a WHERE a.applicationId = ?1 AND a.user.id = ?2")
+    Optional<Application> getLockedApplicationByIdAndOwner(UUID id, UUID userId);
 }

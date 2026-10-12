@@ -15,13 +15,14 @@ public class Application {
 
     protected Application() {}
 
-    public Application(String company, String position, ApplicationStatus status, String notes, String links) {
+    public Application(String company, String position, ApplicationStatus status, String notes, String links, User user) {
         this.company = company;
         this.position = position;
         this.notes = notes;
         this.links = links;
         this.statusChanges = new ArrayList<>();
         this.statusChanges.add(new StatusChange(this, status));
+        this.user = user;
     }
 
     @Id
@@ -45,6 +46,10 @@ public class Application {
     @OrderBy("id ASC")
     private List<StatusChange> statusChanges;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="user_id", nullable = false)
+    private User user;
+
     public UUID getApplicationId() {
         return applicationId;
     }
@@ -63,6 +68,10 @@ public class Application {
 
     public String getLinks() {
         return links;
+    }
+
+    public User getUser() {
+        return user;
     }
 
     public List<StatusChange> getStatusChanges() {

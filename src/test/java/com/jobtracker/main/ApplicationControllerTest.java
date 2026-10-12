@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -15,11 +16,14 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = ApplicationController.class)
+@ContextConfiguration(classes = {SecurityConfig.class, UserDetailsServiceImpl.class, ApplicationController.class, GlobalExceptionHandler.class})
 public class ApplicationControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -27,6 +31,10 @@ public class ApplicationControllerTest {
     @MockitoBean
     private ApplicationService applicationService;
 
+    @MockitoBean
+    private UserRepository userRepository;
+    UUID userId = UUID.fromString("01a1168a-fe8a-7df8-8228-0158fcc22d90");
+    UserDetailModel userDetailModel = new UserDetailModel(userId, "a", "b");
     @Test
     public void postWithoutCompany_returns400() throws Exception {
         String json = """
@@ -35,11 +43,15 @@ public class ApplicationControllerTest {
                     "position": "X",
                     "status": "SAVED"
                 }""";
-        mockMvc.perform(post("/applications").contentType(MediaType.APPLICATION_JSON)
+
+        mockMvc.perform(post("/applications")
+                        .with(csrf())
+                        .with(user(userDetailModel))
+                        .contentType(MediaType.APPLICATION_JSON)
                 .content(json))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("errors.company[0]").value("Company is required"));
-        verify(applicationService, never()).saveApplication(any());
+        verify(applicationService, never()).saveApplication(any(), any());
     }
 
     @Test
@@ -50,11 +62,14 @@ public class ApplicationControllerTest {
                     "position": "X",
                     "status": "SAVED"
                 }""";
-        mockMvc.perform(post("/applications").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/applications")
+                        .with(csrf())
+                        .with(user(userDetailModel))
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("errors.company[0]").value("Company is required"));
-        verify(applicationService, never()).saveApplication(any());
+        verify(applicationService, never()).saveApplication(any(), any());
     }
 
     @Test
@@ -65,35 +80,41 @@ public class ApplicationControllerTest {
                     "position": "X",
                     "status": "BANANA"
                 }""";
-        mockMvc.perform(post("/applications").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/applications")
+                        .with(csrf())
+                        .with(user(userDetailModel))
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("error")
                         .value("\"BANANA\": not one of the values accepted for status: [SAVED, APPLIED, INTERVIEW, OFFER, REJECTED]."));
-        verify(applicationService, never()).saveApplication(any());
+        verify(applicationService, never()).saveApplication(any(), any());
     }
 
     @Test
     public void postWithEmptyBody_returns400() throws Exception {
-        mockMvc.perform(post("/applications").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/applications")
+                        .with(csrf())
+                        .with(user(userDetailModel))
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content(""))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType("application/problem+json"));
-        verify(applicationService, never()).saveApplication(any());
+        verify(applicationService, never()).saveApplication(any(), any());
     }
 
     @Test
     public void getWithInvalidId_returns404() throws Exception {
         UUID id = UUID.fromString("01a1168a-fe8a-7df8-8228-0158fcc22d99");
         String url = "/applications/" + id;
-        when(applicationService.getApplicationById(id)).thenReturn(Optional.empty());
-        mockMvc.perform(get(url))
+        when(applicationService.getApplicationById(id, userId)).thenReturn(Optional.empty());
+        mockMvc.perform(get(url).with(user(userDetailModel)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("detail").value("Application Not Found"))
                 .andExpect(jsonPath("instance").value(url))
                 .andExpect(jsonPath("status").value(HttpStatus.NOT_FOUND.value()))
                 .andExpect(jsonPath("title").value("Not Found"));
-        verify(applicationService, times(1)).getApplicationById(id);
+        verify(applicationService, times(1)).getApplicationById(id, userId);
     }
 
     @Test
@@ -108,8 +129,11 @@ public class ApplicationControllerTest {
         ApplicationDto applicationDto = new ApplicationDto("X", "Y", ApplicationStatus.SAVED, null, null);
         ApplicationResponseDto applicationResponseDto = new ApplicationResponseDto(id, "X", "Y",
                 null, null, List.of(new ChangeStatusResponseDto(ApplicationStatus.SAVED, StatusChangeCause.MANUAL, "", Instant.now())));
-        when(applicationService.saveApplication(applicationDto)).thenReturn(applicationResponseDto);
-        mockMvc.perform(post("/applications").contentType(MediaType.APPLICATION_JSON).content(json))
+        when(applicationService.saveApplication(applicationDto, userId)).thenReturn(applicationResponseDto);
+        mockMvc.perform(post("/applications")
+                        .with(csrf())
+                        .with(user(userDetailModel))
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/applications/" + id))
                 .andExpect(jsonPath("id").value(id.toString()))
@@ -121,7 +145,7 @@ public class ApplicationControllerTest {
                 .andExpect(jsonPath("statusHistory[0].cause").value("MANUAL"))
                 .andExpect(jsonPath("statusHistory[0].detail").value(""))
                 .andExpect(jsonPath("statusHistory[0].createdAt").exists());
-        verify(applicationService, times(1)).saveApplication(applicationDto);
+        verify(applicationService, times(1)).saveApplication(applicationDto, userId);
     }
 
     @Test
@@ -132,10 +156,44 @@ public class ApplicationControllerTest {
                     "position": "X",
                     "status": "SAVED"
                 """;
-        mockMvc.perform(post("/applications").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/applications")
+                        .with(csrf())
+                        .with(user(userDetailModel))
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("error").value("Malformed JSON request"));
-        verify(applicationService, never()).saveApplication(any());
+        verify(applicationService, never()).saveApplication(any(), any());
+    }
+
+    @Test
+    public void postWithNoCsrf_returns403() throws Exception {
+        String json = """
+                {
+                    "company": "X",
+                    "position": "X",
+                    "status": "SAVED"
+                """;
+        mockMvc.perform(post("/applications")
+                        .with(user(userDetailModel))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isForbidden());
+        verify(applicationService, never()).saveApplication(any(), any());
+    }
+    @Test
+    public void postWithNoAuthentication_returns401() throws Exception {
+        String json = """
+                {
+                    "company": "X",
+                    "position": "X",
+                    "status": "SAVED"
+                """;
+        mockMvc.perform(post("/applications")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isUnauthorized());
+        verify(applicationService, never()).saveApplication(any(), any());
     }
 }

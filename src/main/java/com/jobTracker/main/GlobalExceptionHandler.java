@@ -3,6 +3,7 @@ package com.jobtracker.main;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -73,5 +74,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ProblemDetail handleObjectOptimisticLockingFailureException(@NonNull ObjectOptimisticLockingFailureException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Requested object has been recently modified, reload and try again");
+    }
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail handleDataIntegrityViolationException(@NonNull DataIntegrityViolationException exception) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
+                "There was a problem processing the request.");
+        if (exception.getCause() != null) {
+            if (exception.getCause().getMessage().contains("uq_user_username")) {
+                problemDetail.setStatus(HttpStatus.CONFLICT);
+                problemDetail.setDetail("Username already exists.");
+            }
+        }
+        return problemDetail;
     }
 }

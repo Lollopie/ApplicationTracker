@@ -3,6 +3,7 @@ package com.jobtracker.main;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -21,29 +22,32 @@ public class ApplicationController  {
         this.applicationService = applicationService;
     }
     @PostMapping
-    public ResponseEntity<ApplicationResponseDto> createApplication(@Valid @RequestBody ApplicationDto applicationDto) {
-        ApplicationResponseDto application = applicationService.saveApplication(applicationDto);
+    public ResponseEntity<ApplicationResponseDto> createApplication(@Valid @RequestBody ApplicationDto applicationDto,
+                                                                    @AuthenticationPrincipal UserDetailModel userDetails) {
+        ApplicationResponseDto application = applicationService.saveApplication(applicationDto, userDetails.getId());
         return ResponseEntity.created(URI.create("/applications/" + application.id())).body(application);
     }
     @GetMapping
-    public List<ApplicationResponseDto> listApplications() {
-        return applicationService.getApplications();
+    public List<ApplicationResponseDto> listApplications(@AuthenticationPrincipal UserDetailModel userDetails) {
+        return applicationService.getApplications(userDetails.getId());
     }
     @GetMapping("{id}")
-    public ResponseEntity<ApplicationResponseDto> getApplicationById(@PathVariable UUID id) {
-        return applicationService.getApplicationById(id).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
+    public ResponseEntity<ApplicationResponseDto> getApplicationById(@PathVariable UUID id, @AuthenticationPrincipal UserDetailModel userDetails) {
+        return applicationService.getApplicationById(id, userDetails.getId()).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
     }
     @PutMapping("{id}")
-    public ResponseEntity<ApplicationResponseDto> putApplication(@PathVariable UUID id, @Valid @RequestBody ApplicationDto applicationDto) {
-        return applicationService.putApplication(id, applicationDto).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
+    public ResponseEntity<ApplicationResponseDto> putApplication(@PathVariable UUID id, @Valid @RequestBody ApplicationDto applicationDto,
+                                                                 @AuthenticationPrincipal UserDetailModel userDetails) {
+        return applicationService.putApplication(id, applicationDto, userDetails.getId()).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
     }
     @PostMapping("{id}/status")
-    public ResponseEntity<ApplicationResponseDto> changeStatus(@PathVariable UUID id, @Valid @RequestBody ChangeStatusDto changeStatusDto) {
-        return applicationService.changeStatus(id, changeStatusDto).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
+    public ResponseEntity<ApplicationResponseDto> changeStatus(@PathVariable UUID id, @Valid @RequestBody ChangeStatusDto changeStatusDto,
+                                                               @AuthenticationPrincipal UserDetailModel userDetails) {
+        return applicationService.changeStatus(id, changeStatusDto, userDetails.getId()).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
     }
     @DeleteMapping("{id}")
-    public ResponseEntity<Void> deleteApplication(@PathVariable UUID id) {
-        boolean success = applicationService.deleteApplication(id);
+    public ResponseEntity<Void> deleteApplication(@PathVariable UUID id, @AuthenticationPrincipal UserDetailModel userDetails) {
+        boolean success = applicationService.deleteApplication(id, userDetails.getId());
         if (success) {
             return ResponseEntity.noContent().build();
         }

@@ -6,23 +6,29 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ApplicationController.class)
+@ContextConfiguration(classes = {SecurityConfig.class, UserDetailsServiceImpl.class, ApplicationController.class, GlobalExceptionHandler.class})
 public class ApplicationChangeStatusRaceTest {
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
     private ApplicationService applicationService;
+    @MockitoBean
+    private UserRepository userRepository;
     @Test
     public void postWithLockFailure_returns409() throws Exception {
         UUID id = UUID.fromString("01a1168a-fe8a-7df8-8228-0158fcc22d99");
@@ -31,8 +37,12 @@ public class ApplicationChangeStatusRaceTest {
                     "status": "SAVED"
                 }""";
         ChangeStatusDto changeStatusDto = new ChangeStatusDto(ApplicationStatus.SAVED);
-        when(applicationService.changeStatus(id, changeStatusDto)).thenThrow(ObjectOptimisticLockingFailureException.class);
-        mockMvc.perform(post("/applications/" + id + "/status").contentType(MediaType.APPLICATION_JSON)
+        UUID userId = UUID.fromString("01a1168a-fe8a-7df8-8228-0158fcc22d90");
+        UserDetailModel userDetailModel = new UserDetailModel(userId, "a", "b");
+        when(applicationService.changeStatus(id, changeStatusDto, userId)).thenThrow(ObjectOptimisticLockingFailureException.class);
+        mockMvc.perform(post("/applications/" + id + "/status").with(csrf())
+                        .with(user(userDetailModel))
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("detail").value("Requested object has been recently modified, reload and try again"))
