@@ -23,6 +23,7 @@ public class Application {
         this.statusChanges = new ArrayList<>();
         this.statusChanges.add(new StatusChange(this, status));
         this.user = user;
+        this.currentStatus = status;
     }
 
     @Id
@@ -38,11 +39,14 @@ public class Application {
 
     private String links;
 
+    @Column(name="current_status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private ApplicationStatus currentStatus;
 
     @Version
     private int version;
 
-    @OneToMany(mappedBy = "application", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "application")
     @OrderBy("id ASC")
     private List<StatusChange> statusChanges;
 
@@ -78,6 +82,10 @@ public class Application {
         return List.copyOf(statusChanges);
     }
 
+    public ApplicationStatus getCurrentStatus() {
+        return currentStatus;
+    }
+
     public Application updateApplication(String company, String position, String notes, String links) {
         this.company = company;
         this.position = position;
@@ -92,12 +100,12 @@ public class Application {
         return this.changeStatus(status, cause, null);
     }
     public StatusChange changeStatus(ApplicationStatus status, StatusChangeCause cause, String detail) {
-        ApplicationStatus currentStatus = this.statusChanges.getLast().getStatus();
-        if(!currentStatus.allowedTransitionSet().contains(status)) {
-            throw new IllegalStatusTransitionException("Cannot change from status " + currentStatus + " to status " + status);
+        if(!this.currentStatus.allowedTransitionSet().contains(status)) {
+            throw new IllegalStatusTransitionException("Cannot change from status " + this.currentStatus + " to status " + status);
         }
         StatusChange statusChange = new StatusChange(this, status, cause, detail);
         this.statusChanges.add(statusChange);
+        this.currentStatus = statusChange.getStatus();
         return statusChange;
     }
 }

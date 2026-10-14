@@ -1,4 +1,7 @@
 package com.jobtracker.main;
+import jakarta.persistence.criteria.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,8 +33,45 @@ public class ApplicationService {
         application = applicationRepository.save(application);
         return getResponse(application);
     }
-    public List<ApplicationResponseDto> getApplications(UUID userId) {
-        return applicationRepository.getApplicationsByOwner(userId).stream().map(this::getResponse).toList();
+
+    private static final char ESCAPE = '\\';
+
+    static String escapeLike(String input) {
+        return input
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+    }
+
+    public Page<ApplicationResponseDto> getApplications(UUID userId, Pageable page, ApplicationStatus status, String company, String position) {
+        System.out.println(status);
+        return applicationRepository.findAll((root, query, builder) -> {
+            CriteriaQuery<Application> typedQuery = (CriteriaQuery<Application>) query;
+            Predicate predicate = builder.conjunction();
+            if(query.getResultType() != Long.class && query.getResultType() != long.class) {
+                root.fetch("statusChanges", JoinType.LEFT);
+                typedQuery.select(root);
+            }
+            predicate = builder.and(predicate, builder.equal(root.get("user").get("id"), userId));
+            if(status != null) {
+                predicate = builder.and(predicate, builder.equal(
+                        root.get("currentStatus"), status
+                ));
+            }
+
+            if(company != null) {
+                predicate = builder.and(predicate, builder.like(
+                        builder.lower(root.get("company")), "%" + escapeLike(company.toLowerCase()) + "%", ESCAPE
+                ));
+            }
+
+            if(position != null) {
+                predicate = builder.and(predicate, builder.like(
+                        builder.lower(root.get("position")), "%" + escapeLike(position.toLowerCase()) + "%", ESCAPE
+                ));
+            }
+            return predicate;
+        }, page).map(this::getResponse);
     }
     public Optional<ApplicationResponseDto> getApplicationById(UUID id, UUID userId) {
         return applicationRepository.getApplicationByIdAndOwner(id, userId).map(this::getResponse);

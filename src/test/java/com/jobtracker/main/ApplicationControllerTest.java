@@ -3,6 +3,9 @@ package com.jobtracker.main;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
@@ -195,5 +198,25 @@ public class ApplicationControllerTest {
                         .content(json))
                 .andExpect(status().isUnauthorized());
         verify(applicationService, never()).saveApplication(any(), any());
+    }
+
+    @Test
+    public void getWithParameterBinding_returns200() throws Exception {
+        Pageable pageable = PageRequest.of(1, 5, Sort.Direction.DESC, "currentStatus");
+        when(applicationService.getApplications(userId, pageable, ApplicationStatus.SAVED, "APPLE", "JDEV")).thenReturn(null);
+        mockMvc.perform(get("/applications?status=SAVED&company=APPLE&position=JDEV&sort=currentStatus,desc&page=1&size=5")
+                        .with(csrf())
+                        .with(user(userDetailModel)))
+                .andExpect(status().isOk());
+        verify(applicationService, times(1)).getApplications(userId, pageable, ApplicationStatus.SAVED, "APPLE", "JDEV");
+    }
+    @Test
+    public void getWithBadSort_returns400() throws Exception {
+        mockMvc.perform(get("/applications?sort=version")
+                        .with(csrf())
+                        .with(user(userDetailModel)))
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("detail").value("Illegal Sort by field"));
+        verify(applicationService, never()).getApplications(any(), any(), any(), any(), any());
     }
 }
