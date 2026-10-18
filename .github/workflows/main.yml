@@ -31,13 +31,24 @@ jobs:
           java-version: 21
           cache: maven
       - run: ./mvnw -B clean verify
+      - uses: actions/upload-artifact@v7
+        with:
+          name: app-jar
+          path: target/*.jar
   deploy:
+    permissions:
+      contents: read
+      packages: write
     needs: test_backend
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: app-jar
+          path: target
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
         with:
