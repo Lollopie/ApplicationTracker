@@ -44,15 +44,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push Docker image to latest
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: true
-          tags: ghcr.io/${{ github.repository }}:latest
-      - name: Build and push Docker image to commit name
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: true
-          tags: ghcr.io/${{ github.repository }}:{{ github.sha }}
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Build and push
+        run: |
+          docker build -t $IMAGE:latest -t $IMAGE:${GITHUB_SHA::7} .
+          docker push --all-tags $IMAGE
