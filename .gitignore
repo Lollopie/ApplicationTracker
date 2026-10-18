@@ -42,3 +42,5 @@ buildNumber.properties
 .mvn/timing.properties
 # https://maven.apache.org/tools/wrapper/#Usage_with_or_without_Binary_JAR
 application-local.properties
+/config/
+.env

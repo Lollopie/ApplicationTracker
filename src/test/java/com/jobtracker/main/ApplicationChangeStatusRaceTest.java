@@ -3,10 +3,11 @@ package com.jobtracker.main;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.test.context.ContextConfiguration;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -20,15 +21,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ApplicationController.class)
-@ContextConfiguration(classes = {SecurityConfig.class, UserDetailsServiceImpl.class, ApplicationController.class, GlobalExceptionHandler.class})
+@Import({SecurityConfig.class, PasswordConfig.class})
 public class ApplicationChangeStatusRaceTest {
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
     private ApplicationService applicationService;
+
     @MockitoBean
-    private UserRepository userRepository;
+    private UserDetailsService userDetailsService;
+
     @Test
     public void postWithLockFailure_returns409() throws Exception {
         UUID id = UUID.fromString("01a1168a-fe8a-7df8-8228-0158fcc22d99");

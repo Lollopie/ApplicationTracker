@@ -42,36 +42,37 @@ public class ApplicationService {
                 .replace("%", "\\%")
                 .replace("_", "\\_");
     }
+    public static Predicate getFilter(Root<Application> root, CriteriaQuery<?> query, CriteriaBuilder builder,
+                        UUID userId, ApplicationStatus status, String company, String position) {
+        CriteriaQuery<Application> typedQuery = (CriteriaQuery<Application>) query;
+        Predicate predicate = builder.conjunction();
+        if(query.getResultType() != Long.class && query.getResultType() != long.class) {
+            root.fetch("statusChanges", JoinType.LEFT);
+            typedQuery.select(root);
+        }
+        predicate = builder.and(predicate, builder.equal(root.get("user").get("id"), userId));
+        if(status != null) {
+            predicate = builder.and(predicate, builder.equal(
+                root.get("currentStatus"), status
+            ));
+        }
 
+        if(company != null) {
+            predicate = builder.and(predicate, builder.like(
+                builder.lower(root.get("company")), "%" + escapeLike(company.toLowerCase()) + "%", ESCAPE
+            ));
+        }
+
+        if(position != null) {
+            predicate = builder.and(predicate, builder.like(
+                builder.lower(root.get("position")), "%" + escapeLike(position.toLowerCase()) + "%", ESCAPE
+            ));
+        }
+        return predicate;
+    }
     public Page<ApplicationResponseDto> getApplications(UUID userId, Pageable page, ApplicationStatus status, String company, String position) {
-        System.out.println(status);
-        return applicationRepository.findAll((root, query, builder) -> {
-            CriteriaQuery<Application> typedQuery = (CriteriaQuery<Application>) query;
-            Predicate predicate = builder.conjunction();
-            if(query.getResultType() != Long.class && query.getResultType() != long.class) {
-                root.fetch("statusChanges", JoinType.LEFT);
-                typedQuery.select(root);
-            }
-            predicate = builder.and(predicate, builder.equal(root.get("user").get("id"), userId));
-            if(status != null) {
-                predicate = builder.and(predicate, builder.equal(
-                        root.get("currentStatus"), status
-                ));
-            }
-
-            if(company != null) {
-                predicate = builder.and(predicate, builder.like(
-                        builder.lower(root.get("company")), "%" + escapeLike(company.toLowerCase()) + "%", ESCAPE
-                ));
-            }
-
-            if(position != null) {
-                predicate = builder.and(predicate, builder.like(
-                        builder.lower(root.get("position")), "%" + escapeLike(position.toLowerCase()) + "%", ESCAPE
-                ));
-            }
-            return predicate;
-        }, page).map(this::getResponse);
+        return applicationRepository.findAll((root, query, builder) ->
+                getFilter(root, query, builder, userId, status, company, position), page).map(this::getResponse);
     }
     public Optional<ApplicationResponseDto> getApplicationById(UUID id, UUID userId) {
         return applicationRepository.getApplicationByIdAndOwner(id, userId).map(this::getResponse);

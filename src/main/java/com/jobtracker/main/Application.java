@@ -46,7 +46,7 @@ public class Application {
     @Version
     private int version;
 
-    @OneToMany(mappedBy = "application")
+    @OneToMany(mappedBy = "application", cascade = CascadeType.PERSIST)
     @OrderBy("id ASC")
     private List<StatusChange> statusChanges;
 
