@@ -44,7 +44,7 @@ jobs:
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Build the image
-        run: docker build -t $IMAGE:latest -t $IMAGE:${GITHUB_SHA::7}
+        run: docker build -t $IMAGE:latest -t $IMAGE:${GITHUB_SHA::7} .
       - name: Push the image
         if: github.event_name == 'push'
         run: docker push --all-tags $IMAGE
