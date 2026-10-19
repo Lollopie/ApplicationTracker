@@ -6,7 +6,7 @@ CREATE TABLE users (
     password text NOT NULL
 );
 
-INSERT INTO users(email, username, password) VALUES('admin@example.org', 'admin', ${adminPasswordHash});
+INSERT INTO users(email, username, password) VALUES('admin@example.org', 'admin', '${admin_password_hash}');
 
 ALTER TABLE application ADD COLUMN user_id uuid;
 

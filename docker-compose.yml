@@ -23,10 +23,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    ports:
+      - "8080:8080"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
     networks:
       - app-network
 volumes:

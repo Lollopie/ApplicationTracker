@@ -1,4 +1,4 @@
-FROM eclipse-temurin:26-jdk-alpine AS builder
+FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /builder
 ARG JAR_FILE=target/*.jar
 
@@ -6,7 +6,7 @@ COPY ${JAR_FILE} application.jar
 
 RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
 
-FROM eclipse-temurin:26-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /application
 
@@ -19,4 +19,4 @@ RUN addgroup -g 1432 springgroup && adduser -H -s /sbin/nologin -u 1432 -G sprin
 
 USER springuser
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "application.jar", "-XX:+MaxRAMPercentage=10"]
+ENTRYPOINT ["java", "-jar", "-XX:MaxRAMPercentage=75", "application.jar"]
