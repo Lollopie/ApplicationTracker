@@ -11,28 +11,28 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class ApplicationService {
-    private final ApplicationRepository applicationRepository;
+public class JobApplicationService {
+    private final JobApplicationRepository jobApplicationRepository;
     private final UserRepository userRepository;
-    public ApplicationService(ApplicationRepository applicationRepository, UserRepository userRepository) {
-        this.applicationRepository = applicationRepository;
+    public JobApplicationService(JobApplicationRepository jobApplicationRepository, UserRepository userRepository) {
+        this.jobApplicationRepository = jobApplicationRepository;
         this.userRepository = userRepository;
     }
 
-    private ApplicationResponseDto getResponse(Application application) {
-        List<ChangeStatusResponseDto> statusChanges = application.getStatusChanges().stream()
+    private JobApplicationResponseDto getResponse(JobApplication jobApplication) {
+        List<ChangeStatusResponseDto> statusChanges = jobApplication.getStatusChanges().stream()
                 .map(statusChange -> new ChangeStatusResponseDto(statusChange.getStatus(),
                         statusChange.getCause(), statusChange.getDetail(), statusChange.getCreatedAt())).toList();
-        return new ApplicationResponseDto(application.getApplicationId(), application.getCompany(), application.getPosition(),
-                application.getNotes(), application.getLinks(), statusChanges);
+        return new JobApplicationResponseDto(jobApplication.getApplicationId(), jobApplication.getCompany(), jobApplication.getPosition(),
+                jobApplication.getNotes(), jobApplication.getLinks(), statusChanges);
     }
 
     @Transactional
-    public ApplicationResponseDto saveApplication(ApplicationDto applicationDto, UUID userId) {
-        Application application = new Application(applicationDto.company(), applicationDto.position(), applicationDto.status(),
-                applicationDto.notes(), applicationDto.links(), userRepository.getReferenceById(userId));
-        application = applicationRepository.save(application);
-        return getResponse(application);
+    public JobApplicationResponseDto saveApplication(JobApplicationDto jobApplicationDto, UUID userId) {
+        JobApplication jobApplication = new JobApplication(jobApplicationDto.company(), jobApplicationDto.position(), jobApplicationDto.status(),
+                jobApplicationDto.notes(), jobApplicationDto.links(), userRepository.getReferenceById(userId));
+        jobApplication = jobApplicationRepository.save(jobApplication);
+        return getResponse(jobApplication);
     }
 
     private static final char ESCAPE = '\\';
@@ -43,9 +43,9 @@ public class ApplicationService {
                 .replace("%", "\\%")
                 .replace("_", "\\_");
     }
-    public static Predicate getFilter(Root<Application> root, CriteriaQuery<?> query, CriteriaBuilder builder,
-                        UUID userId, ApplicationStatus status, String company, String position) {
-        CriteriaQuery<Application> typedQuery = (CriteriaQuery<Application>) query;
+    public static Predicate getFilter(Root<JobApplication> root, CriteriaQuery<?> query, CriteriaBuilder builder,
+                                      UUID userId, JobApplicationStatus status, String company, String position) {
+        CriteriaQuery<JobApplication> typedQuery = (CriteriaQuery<JobApplication>) query;
         Predicate predicate = builder.conjunction();
         if(query.getResultType() != Long.class && query.getResultType() != long.class) {
             root.fetch("statusChanges", JoinType.LEFT);
@@ -71,16 +71,16 @@ public class ApplicationService {
         }
         return predicate;
     }
-    public Page<ApplicationResponseDto> getApplications(UUID userId, Pageable page, ApplicationStatus status, String company, String position) {
-        return applicationRepository.findAll((root, query, builder) ->
+    public Page<JobApplicationResponseDto> getApplications(UUID userId, Pageable page, JobApplicationStatus status, String company, String position) {
+        return jobApplicationRepository.findAll((root, query, builder) ->
                 getFilter(root, query, builder, userId, status, company, position), page).map(this::getResponse);
     }
-    public Optional<ApplicationResponseDto> getApplicationById(UUID id, UUID userId) {
-        return applicationRepository.getApplicationByIdAndOwner(id, userId).map(this::getResponse);
+    public Optional<JobApplicationResponseDto> getApplicationById(UUID id, UUID userId) {
+        return jobApplicationRepository.getApplicationByIdAndOwner(id, userId).map(this::getResponse);
     }
     @Transactional
-    public Optional<ApplicationResponseDto> putApplication(UUID id, UpdateApplicationDto applicationDto, UUID userId) {
-        return applicationRepository.getApplicationByIdAndOwner(id, userId)
+    public Optional<JobApplicationResponseDto> putApplication(UUID id, UpdateJobApplicationDto applicationDto, UUID userId) {
+        return jobApplicationRepository.getApplicationByIdAndOwner(id, userId)
                 .map(application ->
                     getResponse(
                             application.updateApplication(
@@ -91,13 +91,13 @@ public class ApplicationService {
     }
     @Transactional()
     public boolean deleteApplication(UUID id, UUID userId) {
-        Optional<Application> previousApplication = applicationRepository.getApplicationByIdAndOwner(id, userId);
-        previousApplication.ifPresent(applicationRepository::delete);
+        Optional<JobApplication> previousApplication = jobApplicationRepository.getApplicationByIdAndOwner(id, userId);
+        previousApplication.ifPresent(jobApplicationRepository::delete);
         return previousApplication.isPresent();
     }
     @Transactional
-    public Optional<ApplicationResponseDto> changeStatus(UUID applicationId, ChangeStatusDto statusDto, UUID userId) {
-        return applicationRepository.getLockedApplicationByIdAndOwner(applicationId, userId)
+    public Optional<JobApplicationResponseDto> changeStatus(UUID applicationId, ChangeStatusDto statusDto, UUID userId) {
+        return jobApplicationRepository.getLockedApplicationByIdAndOwner(applicationId, userId)
                 .map(application -> {
                     application.changeStatus(statusDto.status());
                     return getResponse(application);

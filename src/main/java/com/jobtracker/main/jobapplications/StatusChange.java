@@ -13,22 +13,22 @@ import java.util.UUID;
 public class StatusChange {
     protected StatusChange() {}
 
-    public StatusChange(Application application, ApplicationStatus status) {
-        this.application = application;
+    public StatusChange(JobApplication jobApplication, JobApplicationStatus status) {
+        this.jobApplication = jobApplication;
         this.status = status;
         this.cause = StatusChangeCause.MANUAL;
     }
 
 
 
-    public StatusChange(Application application, ApplicationStatus status, StatusChangeCause cause) {
-        this.application = application;
+    public StatusChange(JobApplication jobApplication, JobApplicationStatus status, StatusChangeCause cause) {
+        this.jobApplication = jobApplication;
         this.status = status;
         this.cause = cause;
     }
 
-    public StatusChange(Application application, ApplicationStatus status, StatusChangeCause cause, String detail) {
-        this.application = application;
+    public StatusChange(JobApplication jobApplication, JobApplicationStatus status, StatusChangeCause cause, String detail) {
+        this.jobApplication = jobApplication;
         this.status = status;
         this.cause = cause;
         this.detail = detail;
@@ -40,10 +40,10 @@ public class StatusChange {
     private UUID id;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="application_id")
-    private Application application;
+    private JobApplication jobApplication;
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private ApplicationStatus status;
+    private JobApplicationStatus status;
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private StatusChangeCause cause;
@@ -54,7 +54,7 @@ public class StatusChange {
     @Generated(event = EventType.INSERT)
     private Instant createdAt;
 
-    public ApplicationStatus getStatus() {
+    public JobApplicationStatus getStatus() {
         return status;
     }
 

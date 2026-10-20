@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @AutoConfigureRestTestClient
 @ActiveProfiles("test")
 @Import({TestData.class, PasswordConfig.class})
-public class ApplicationIT extends AbstractIntegrationTest {
+public class JobApplicationIT extends AbstractIntegrationTest {
 
     @Autowired
     TestData testData;
@@ -36,7 +36,7 @@ public class ApplicationIT extends AbstractIntegrationTest {
     UserRepository userRepository;
 
     @Autowired
-    ApplicationRepository applicationRepository;
+    JobApplicationRepository jobApplicationRepository;
 
     @BeforeEach
     public void cleanUp() {
@@ -65,7 +65,7 @@ public class ApplicationIT extends AbstractIntegrationTest {
 
     public ResponseCookie loginAndGetSessionCookie(String token, String username, String password) {
         testData.scenario().withUser("user", "password")
-                .withApplication("X", "Y", ApplicationStatus.SAVED, null, null, "user");
+                .withApplication("X", "Y", JobApplicationStatus.SAVED, null, null, "user");
 
         var login = client.post().uri("/login")
                 .cookie("XSRF-TOKEN", token)
@@ -120,17 +120,17 @@ public class ApplicationIT extends AbstractIntegrationTest {
                 .cookie(session.getName(), session.getValue())
                 .header("X-XSRF-TOKEN", token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new ApplicationDto("X", "Y", ApplicationStatus.SAVED, null, null))
+                .body(new JobApplicationDto("X", "Y", JobApplicationStatus.SAVED, null, null))
                 .exchange()
                 .expectStatus().isCreated()
-                .expectBody(ApplicationResponseDto.class);
-        assertEquals(1, applicationRepository.findAll().size());
+                .expectBody(JobApplicationResponseDto.class);
+        assertEquals(1, jobApplicationRepository.findAll().size());
     }
 
     @Test
     public void listApplications() {
         testData.scenario().withUser("user", "password")
-                .withApplication("X", "Y", ApplicationStatus.SAVED, null, null, "user");
+                .withApplication("X", "Y", JobApplicationStatus.SAVED, null, null, "user");
         String token = getCsrfToken();
         ResponseCookie session = loginAndGetSessionCookie(token);
         client.get().uri("/applications")
@@ -152,7 +152,7 @@ public class ApplicationIT extends AbstractIntegrationTest {
     public void twoUserListApplications() {
         testData.scenario().withUser("user1")
                 .withUser("user2", "password")
-                .withApplication("X", "Y", ApplicationStatus.SAVED, null, null, "user1");
+                .withApplication("X", "Y", JobApplicationStatus.SAVED, null, null, "user1");
         String token = getCsrfToken();
         ResponseCookie session = loginAndGetSessionCookie(token, "user2", "password");
         client.get().uri("/applications")
@@ -180,7 +180,7 @@ public class ApplicationIT extends AbstractIntegrationTest {
         client.post().uri("/applications")
                 .cookie(session.getName(), session.getValue())
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new ApplicationDto("X", "Y", ApplicationStatus.SAVED, null, null))
+                .body(new JobApplicationDto("X", "Y", JobApplicationStatus.SAVED, null, null))
                 .exchange()
                 .expectStatus().isForbidden();
     }
@@ -188,21 +188,21 @@ public class ApplicationIT extends AbstractIntegrationTest {
     @Test
     public void statusChangeIsSaved() {
         TestData.Scenario scenario = testData.scenario().withUser("user", "password")
-                .withApplication("X", "Y", ApplicationStatus.SAVED, null, null, "user");
-        Application application = scenario.application();
+                .withApplication("X", "Y", JobApplicationStatus.SAVED, null, null, "user");
+        JobApplication jobApplication = scenario.application();
         String token = getCsrfToken();
         ResponseCookie session = loginAndGetSessionCookie(token);
         token = getCsrfToken();
-        client.post().uri("/applications/" + application.getApplicationId() + "/status")
+        client.post().uri("/applications/" + jobApplication.getApplicationId() + "/status")
                 .cookie("XSRF-TOKEN", token)
                 .cookie(session.getName(), session.getValue())
                 .header("X-XSRF-TOKEN", token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new ChangeStatusDto(ApplicationStatus.APPLIED))
+                .body(new ChangeStatusDto(JobApplicationStatus.APPLIED))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(ChangeStatusResponseDto.class);
-        client.get().uri("/applications/" + application.getApplicationId())
+        client.get().uri("/applications/" + jobApplication.getApplicationId())
                 .cookie(session.getName(), session.getValue())
                 .exchange()
                 .expectStatus().isOk()
@@ -213,11 +213,11 @@ public class ApplicationIT extends AbstractIntegrationTest {
     public void twoUserListApplicationsById_returns404() {
         TestData.Scenario scenario = testData.scenario().withUser("user1")
                 .withUser("user2", "password")
-                .withApplication("X", "Y", ApplicationStatus.SAVED, null, null, "user1");
-        Application application = scenario.application();
+                .withApplication("X", "Y", JobApplicationStatus.SAVED, null, null, "user1");
+        JobApplication jobApplication = scenario.application();
         String token = getCsrfToken();
         ResponseCookie session = loginAndGetSessionCookie(token, "user2", "password");
-        client.get().uri("/applications/" + application.getApplicationId())
+        client.get().uri("/applications/" + jobApplication.getApplicationId())
                 .cookie(session.getName(), session.getValue())
                 .exchange()
                 .expectStatus().isNotFound()    ;

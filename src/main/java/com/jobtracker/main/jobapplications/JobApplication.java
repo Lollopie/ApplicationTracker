@@ -13,11 +13,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name="application")
-public class Application {
+public class JobApplication {
 
-    protected Application() {}
+    protected JobApplication() {}
 
-    public Application(String company, String position, ApplicationStatus status, String notes, String links, User user) {
+    public JobApplication(String company, String position, JobApplicationStatus status, String notes, String links, User user) {
         this.company = company;
         this.position = position;
         this.notes = notes;
@@ -43,7 +43,7 @@ public class Application {
 
     @Column(name="current_status", nullable = false)
     @Enumerated(EnumType.STRING)
-    private ApplicationStatus currentStatus;
+    private JobApplicationStatus currentStatus;
 
     @Version
     private int version;
@@ -84,24 +84,24 @@ public class Application {
         return List.copyOf(statusChanges);
     }
 
-    public ApplicationStatus getCurrentStatus() {
+    public JobApplicationStatus getCurrentStatus() {
         return currentStatus;
     }
 
-    public Application updateApplication(String company, String position, String notes, String links) {
+    public JobApplication updateApplication(String company, String position, String notes, String links) {
         this.company = company;
         this.position = position;
         this.notes = notes;
         this.links = links;
         return this;
     }
-    public StatusChange changeStatus(ApplicationStatus status) {
+    public StatusChange changeStatus(JobApplicationStatus status) {
         return this.changeStatus(status, StatusChangeCause.MANUAL);
     }
-    public StatusChange changeStatus(ApplicationStatus status, StatusChangeCause cause) {
+    public StatusChange changeStatus(JobApplicationStatus status, StatusChangeCause cause) {
         return this.changeStatus(status, cause, null);
     }
-    public StatusChange changeStatus(ApplicationStatus status, StatusChangeCause cause, String detail) {
+    public StatusChange changeStatus(JobApplicationStatus status, StatusChangeCause cause, String detail) {
         if(!this.currentStatus.allowedTransitionSet().contains(status)) {
             throw new IllegalStatusTransitionException("Cannot change from status " + this.currentStatus + " to status " + status);
         }

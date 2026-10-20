@@ -1,8 +1,8 @@
 package com.jobtracker.main;
 
-import com.jobtracker.main.jobapplications.Application;
-import com.jobtracker.main.jobapplications.ApplicationRepository;
-import com.jobtracker.main.jobapplications.ApplicationStatus;
+import com.jobtracker.main.jobapplications.JobApplication;
+import com.jobtracker.main.jobapplications.JobApplicationRepository;
+import com.jobtracker.main.jobapplications.JobApplicationStatus;
 import com.jobtracker.main.users.User;
 import com.jobtracker.main.users.UserRepository;
 import org.springframework.boot.test.context.TestComponent;
@@ -17,14 +17,14 @@ import java.util.List;
 public class TestData {
 
     private final UserRepository userRepository;
-    private final ApplicationRepository applicationRepository;
+    private final JobApplicationRepository jobApplicationRepository;
     private final PasswordEncoder passwordEncoder;
 
     public TestData(UserRepository userRepository,
-                    ApplicationRepository applicationRepository,
+                    JobApplicationRepository jobApplicationRepository,
                     PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
-        this.applicationRepository = applicationRepository;
+        this.jobApplicationRepository = jobApplicationRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -33,13 +33,13 @@ public class TestData {
     }
 
     public void clear() {
-        applicationRepository.deleteAll();
+        jobApplicationRepository.deleteAll();
         userRepository.deleteAll();
     }
 
     public class Scenario {
         private final HashMap<String, User> users = new HashMap<>();
-        private final List<Application> applications = new ArrayList<>();
+        private final List<JobApplication> jobApplications = new ArrayList<>();
 
         public Scenario withUser(String username) {
             users.put(username, userRepository.saveAndFlush(new User(username, passwordEncoder.encode("password"))));
@@ -51,19 +51,19 @@ public class TestData {
             return this;
         }
 
-        public Scenario withApplication(String company, String position, ApplicationStatus status, String notes, String links, String username) {
+        public Scenario withApplication(String company, String position, JobApplicationStatus status, String notes, String links, String username) {
             User user = users.get(username);
-            applications.add(applicationRepository.saveAndFlush(new Application(company, position, status, notes, links, user)));
+            jobApplications.add(jobApplicationRepository.saveAndFlush(new JobApplication(company, position, status, notes, links, user)));
             return this;
         }
 
-        public Scenario withApplication(String company, String position, List<ApplicationStatus> statusList, String notes, String links, String username) {
+        public Scenario withApplication(String company, String position, List<JobApplicationStatus> statusList, String notes, String links, String username) {
             User user = users.get(username);
-            Application application = new Application(company, position, statusList.getFirst(), notes, links, user);
+            JobApplication jobApplication = new JobApplication(company, position, statusList.getFirst(), notes, links, user);
             for (int i = 1; i < statusList.size(); i++) {
-                application.changeStatus(statusList.get(i));
+                jobApplication.changeStatus(statusList.get(i));
             }
-            applications.add(applicationRepository.saveAndFlush(application));
+            jobApplications.add(jobApplicationRepository.saveAndFlush(jobApplication));
             return this;
         }
 
@@ -73,7 +73,7 @@ public class TestData {
         }
         public List<User> users() { return users.values().stream().toList(); }
         public User getUser(String username) { return users.get(username); }
-        public Application application() { return applications.getFirst(); }
-        public List<Application> applications() { return applications; }
+        public JobApplication application() { return jobApplications.getFirst(); }
+        public List<JobApplication> applications() { return jobApplications; }
     }
 }
