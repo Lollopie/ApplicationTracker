@@ -25,7 +25,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) {
+    public SecurityFilterChain filterChain(HttpSecurity http, UnauthorizedAuthenticationEntryPoint unauthorizedAuthenticationEntryPoint) {
         return http.csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository()).spa())
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/register", "/login").permitAll()
@@ -37,7 +37,7 @@ public class SecurityConfig {
                         .anyRequest().denyAll()
                 )
                 .exceptionHandling(exception ->
-                        exception.authenticationEntryPoint(new UnauthorizedAuthenticationEntryPoint()))
+                        exception.authenticationEntryPoint(unauthorizedAuthenticationEntryPoint))
                 .sessionManagement((session) -> session
                         .sessionFixation(SessionManagementConfigurer.SessionFixationConfigurer::newSession))
                 .logout((logout) -> logout.logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler()))

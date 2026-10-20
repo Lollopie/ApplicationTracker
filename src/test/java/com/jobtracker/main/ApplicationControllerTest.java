@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = ApplicationController.class)
-@Import({SecurityConfig.class, PasswordConfig.class})
+@Import({SecurityConfig.class, PasswordConfig.class, UnauthorizedAuthenticationEntryPoint.class})
 public class ApplicationControllerTest {
     @Autowired
     private MockMvc mockMvc;

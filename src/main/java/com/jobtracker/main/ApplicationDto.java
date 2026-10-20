@@ -2,6 +2,7 @@ package com.jobtracker.main;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.hibernate.validator.constraints.Length;
 
 public record ApplicationDto(
         @NotBlank(message = "Company is required")
@@ -10,8 +11,8 @@ public record ApplicationDto(
         String position,
         @NotNull(message = "Status is required")
         ApplicationStatus status,
-
+        @Length(min = 0, max = 500)
         String notes,
-
+        @Length(min = 0, max = 500)
         String links) {
 }

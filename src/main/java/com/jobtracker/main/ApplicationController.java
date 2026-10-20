@@ -59,7 +59,7 @@ public class ApplicationController  {
         return applicationService.getApplicationById(id, userDetails.getId()).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
     }
     @PutMapping("{id}")
-    public ResponseEntity<ApplicationResponseDto> putApplication(@PathVariable UUID id, @Valid @RequestBody ApplicationDto applicationDto,
+    public ResponseEntity<ApplicationResponseDto> putApplication(@PathVariable UUID id, @Valid @RequestBody UpdateApplicationDto applicationDto,
                                                                  @AuthenticationPrincipal UserDetailModel userDetails) {
         return applicationService.putApplication(id, applicationDto, userDetails.getId()).map(ResponseEntity::ok).orElseThrow(this::createResponseStatusException);
     }

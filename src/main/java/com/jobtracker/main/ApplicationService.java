@@ -78,7 +78,7 @@ public class ApplicationService {
         return applicationRepository.getApplicationByIdAndOwner(id, userId).map(this::getResponse);
     }
     @Transactional
-    public Optional<ApplicationResponseDto> putApplication(UUID id, ApplicationDto applicationDto, UUID userId) {
+    public Optional<ApplicationResponseDto> putApplication(UUID id, UpdateApplicationDto applicationDto, UUID userId) {
         return applicationRepository.getApplicationByIdAndOwner(id, userId)
                 .map(application ->
                     getResponse(

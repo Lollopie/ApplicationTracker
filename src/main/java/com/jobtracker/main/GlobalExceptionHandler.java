@@ -45,7 +45,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         if(exception.getCause() != null) {
             switch (exception.getCause()){
                 case InvalidFormatException invalidFormatException -> {
-                    String error = getErrorMessage(invalidFormatException);
+                    String error = getEnumErrorMessage(invalidFormatException);
                     problemDetail.setProperty("error", error);
                 }
 
@@ -58,13 +58,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(exception, problemDetail, headers, status, request);
     }
 
-    private static @NonNull String getErrorMessage(InvalidFormatException invalidFormatException) {
+    private static @NonNull String getEnumErrorMessage(InvalidFormatException invalidFormatException) {
         String error = "\"" + invalidFormatException.getValue();
-        error += invalidFormatException.getTargetType().isEnum() ?
-                "\": not one of the values accepted for " +
+        error += "\": not one of the values accepted for " +
                 invalidFormatException.getPath().getLast().getPropertyName() +
-                ": " + Arrays.toString(invalidFormatException.getTargetType().getEnumConstants()) + "."
-                : "invalid value for field " + invalidFormatException.getPath().getLast().getPropertyName() + ".";
+                ": " + Arrays.toString(invalidFormatException.getTargetType().getEnumConstants()) + ".";
         return error;
     }
     @ExceptionHandler(IllegalStatusTransitionException.class)
@@ -79,7 +77,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleDataIntegrityViolationException(@NonNull DataIntegrityViolationException exception) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
                 "There was a problem processing the request.");
-        if (exception.getCause() != null) {
+        if (exception.getCause() != null && exception.getCause().getMessage() != null) {
             if (exception.getCause().getMessage().contains("uq_user_username")) {
                 problemDetail.setStatus(HttpStatus.CONFLICT);
                 problemDetail.setDetail("Username already exists.");

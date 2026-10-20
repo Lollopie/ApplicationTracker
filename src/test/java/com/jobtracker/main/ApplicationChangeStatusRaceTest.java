@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ApplicationController.class)
-@Import({SecurityConfig.class, PasswordConfig.class})
+@Import({SecurityConfig.class, PasswordConfig.class, UnauthorizedAuthenticationEntryPoint.class})
 public class ApplicationChangeStatusRaceTest {
     @Autowired
     private MockMvc mockMvc;
