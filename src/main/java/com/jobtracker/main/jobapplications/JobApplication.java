@@ -48,7 +48,7 @@ public class JobApplication {
     @Version
     private int version;
 
-    @OneToMany(mappedBy = "application", cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "jobApplication", cascade = CascadeType.PERSIST)
     @OrderBy("id ASC")
     private List<StatusChange> statusChanges;
 
