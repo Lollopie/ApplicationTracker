@@ -1,4 +1,4 @@
-package com.jobtracker.main;
+package com.jobtracker.main.users;
 
 import jakarta.validation.constraints.NotBlank;
 

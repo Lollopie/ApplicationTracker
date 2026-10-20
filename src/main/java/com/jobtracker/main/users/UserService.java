@@ -1,4 +1,4 @@
-package com.jobtracker.main;
+package com.jobtracker.main.users;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

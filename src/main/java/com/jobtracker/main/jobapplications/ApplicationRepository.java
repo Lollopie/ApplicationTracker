@@ -1,4 +1,4 @@
-package com.jobtracker.main;
+package com.jobtracker.main.jobapplications;
 
 import org.jspecify.annotations.NullMarked;
 import org.springframework.data.domain.Page;

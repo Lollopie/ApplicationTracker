@@ -1,5 +1,10 @@
 package com.jobtracker.main;
 
+import com.jobtracker.main.jobapplications.Application;
+import com.jobtracker.main.jobapplications.ApplicationRepository;
+import com.jobtracker.main.jobapplications.ApplicationService;
+import com.jobtracker.main.jobapplications.ApplicationStatus;
+import com.jobtracker.main.users.User;
 import org.junit.jupiter.api.Test;
 import org.postgresql.util.PSQLException;
 import org.springframework.beans.factory.annotation.Autowired;

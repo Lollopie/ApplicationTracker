@@ -1,5 +1,6 @@
-package com.jobtracker.main;
+package com.jobtracker.main.jobapplications;
 
+import com.jobtracker.main.users.UserDetailModel;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

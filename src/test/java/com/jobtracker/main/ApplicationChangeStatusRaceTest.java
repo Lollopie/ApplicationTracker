@@ -1,5 +1,10 @@
 package com.jobtracker.main;
 
+import com.jobtracker.main.jobapplications.ApplicationController;
+import com.jobtracker.main.jobapplications.ApplicationService;
+import com.jobtracker.main.jobapplications.ApplicationStatus;
+import com.jobtracker.main.jobapplications.ChangeStatusDto;
+import com.jobtracker.main.users.UserDetailModel;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;

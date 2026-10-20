@@ -1,4 +1,4 @@
-package com.jobtracker.main;
+package com.jobtracker.main.users;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

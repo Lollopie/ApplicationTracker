@@ -1,5 +1,10 @@
 package com.jobtracker.main;
 
+import com.jobtracker.main.jobapplications.Application;
+import com.jobtracker.main.jobapplications.ApplicationRepository;
+import com.jobtracker.main.jobapplications.ApplicationStatus;
+import com.jobtracker.main.users.User;
+import com.jobtracker.main.users.UserRepository;
 import org.springframework.boot.test.context.TestComponent;
 import org.springframework.security.crypto.password.PasswordEncoder;
 

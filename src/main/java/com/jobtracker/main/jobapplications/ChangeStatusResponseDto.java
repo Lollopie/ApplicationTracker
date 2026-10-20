@@ -1,4 +1,4 @@
-package com.jobtracker.main;
+package com.jobtracker.main.jobapplications;
 
 import java.time.Instant;
 

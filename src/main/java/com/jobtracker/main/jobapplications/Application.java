@@ -1,5 +1,7 @@
-package com.jobtracker.main;
+package com.jobtracker.main.jobapplications;
 
+import com.jobtracker.main.IllegalStatusTransitionException;
+import com.jobtracker.main.users.User;
 import jakarta.persistence.*;
 import org.hibernate.generator.EventType;
 

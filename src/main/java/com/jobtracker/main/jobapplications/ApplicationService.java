@@ -1,4 +1,5 @@
-package com.jobtracker.main;
+package com.jobtracker.main.jobapplications;
+import com.jobtracker.main.users.UserRepository;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

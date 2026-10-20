@@ -1,4 +1,4 @@
-package com.jobtracker.main;
+package com.jobtracker.main.users;
 
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;

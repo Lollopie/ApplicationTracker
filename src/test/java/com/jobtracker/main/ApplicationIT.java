@@ -1,5 +1,9 @@
 package com.jobtracker.main;
 
+import com.jobtracker.main.jobapplications.*;
+import com.jobtracker.main.users.LoginDto;
+import com.jobtracker.main.users.RegisterDto;
+import com.jobtracker.main.users.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

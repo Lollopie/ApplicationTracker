@@ -1,5 +1,10 @@
 package com.jobtracker.main;
 
+import com.jobtracker.main.jobapplications.Application;
+import com.jobtracker.main.jobapplications.ApplicationStatus;
+import com.jobtracker.main.jobapplications.StatusChange;
+import com.jobtracker.main.jobapplications.StatusChangeCause;
+import com.jobtracker.main.users.User;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
