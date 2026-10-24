@@ -145,10 +145,10 @@ Production runs on Render's free tier, behind one domain shared with other apps:
 | Path | Served by |
 |---|---|
 | `example.com/` | the home page (a Render Static Site in its own repo), which is also the gateway |
-| `example.com/tracker/*` | `tracker-web`, the SPA built with `VITE_BASE=/tracker/` |
-| `example.com/tracker/api/*` | `tracker-api`, the Spring image from GHCR, with the `/tracker/api` prefix stripped |
+| `example.com/tracker/*` | `tracker-web`, the SPA built with `VITE_BASE=/tracker/` into `dist/tracker/` |
+| `example.com/tracker/api/*` | `tracker-api`, the Spring image from GHCR, reached through `tracker-web` with the `/tracker/api` prefix stripped |
 
-The home site forwards these paths with Static Site rewrite rules, listed with the API rule first. The gateway is a static site, so it never sleeps.
+The home site forwards `/tracker/*` to `tracker-web` unchanged. `tracker-web` forwards `/tracker/api/*` to `tracker-api` and serves the SPA shell for every other path, with the API rule listed first. Both are static sites, so neither ever sleeps. `tracker-web` is also a complete copy of the tracker on its own URL, at `https://<tracker-web>.onrender.com/tracker/`.
 
 Setup:
 
@@ -160,7 +160,7 @@ Setup:
    - `ADMIN_PASSWORD_HASH`
 3. **Image access:** make the GHCR package public, or add a registry credential in Render.
 4. **Deploys:** copy `tracker-api`'s deploy hook URL into the GitHub secret `RENDER_DEPLOY_HOOK_URL`. `tracker-web` builds itself on every push that touches `frontend/`.
-5. **Gateway:** in the home site's rewrites, point `/tracker/api/*` and `/tracker/*` at the two services' `onrender.com` URLs.
+5. **Routing:** Render may add a suffix to a service's URL (here `tracker-api-2igk`, `tracker-web-y2tx`). Point `tracker-web`'s `/tracker/api/*` rewrite in [`render.yaml`](render.yaml) at the API's actual URL, and the home site's `/tracker/*` rewrite at `tracker-web`'s.
 
 The backend's `COOKIE_PATH` must match the frontend's `VITE_BASE`, without the trailing slash. Check a deployment with:
 

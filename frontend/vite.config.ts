@@ -9,6 +9,9 @@ const apiPrefix = `${base}api`
 // https://vite.dev/config/
 export default defineConfig({
   base,
+  // A prefixed build lands in dist/<prefix>/, so a static host serving dist/ finds the files at the
+  // same paths index.html references (/tracker/assets/...), whether or not a gateway sits in front.
+  build: { outDir: `dist${base}` },
   plugins: [react(), tailwindcss()],
   server: {
     // The SPA talks to Spring through <base>api so its routes never clash with API paths

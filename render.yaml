@@ -1,6 +1,7 @@
-# Render Blueprint for the Job Tracker. Both services are reached only through the home site's gateway,
-# which serves example.com/tracker/ (tracker-web) and example.com/tracker/api/* (tracker-api).
-# If Render gives a service a suffixed URL (name already taken), update the gateway rewrites to match.
+# Render Blueprint for the Job Tracker. tracker-web serves the SPA under /tracker/ and forwards
+# /tracker/api/* to tracker-api, so it works on its own URL and behind the home site's gateway alike.
+# Render suffixed both service URLs (names were taken): if they ever change, update the API rewrite
+# below and the home site's /tracker/* rewrite.
 services:
   - type: web
     name: tracker-api
@@ -63,11 +64,17 @@ services:
       - path: /*
         name: Content-Security-Policy
         value: "default-src 'self'; frame-ancestors 'none'"
-      - path: /assets/*
+      - path: /tracker/assets/*
         name: Cache-Control
         value: public, max-age=31536000, immutable
+    # The build is published under /tracker/ (VITE_BASE), so this site is a complete Job Tracker on its own:
+    # https://tracker-web-y2tx.onrender.com/tracker/. The home gateway forwards /tracker/* here unchanged.
     routes:
-      # The gateway strips /tracker, so client-side routes arrive here as /applications/... .
+      # Order matters: the API rule must come before the SPA fallback that would also match it.
       - type: rewrite
-        source: /*
-        destination: /index.html
+        source: /tracker/api/*
+        destination: https://tracker-api-2igk.onrender.com/*
+      # Client-side routes (/tracker/applications/...) all serve the SPA shell.
+      - type: rewrite
+        source: /tracker/*
+        destination: /tracker/index.html
