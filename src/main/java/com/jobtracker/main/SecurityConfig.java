@@ -1,5 +1,6 @@
 package com.jobtracker.main;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,14 +20,19 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 public class SecurityConfig {
     private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
-    public SecurityConfig(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+    private final String cookiePath;
+    public SecurityConfig(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder,
+                          @Value("${server.servlet.session.cookie.path}") String cookiePath) {
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
+        this.cookiePath = cookiePath;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, UnauthorizedAuthenticationEntryPoint unauthorizedAuthenticationEntryPoint) {
-        return http.csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository()).spa())
+        // spa() installs its own token repository, so ours is set afterwards: the filter and the
+        // token rotation in UserController#login must share one repository with the same cookie path.
+        return http.csrf(csrf -> csrf.spa().csrfTokenRepository(csrfTokenRepository()))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/register", "/login").permitAll()
                         .requestMatchers("/actuator", "/actuator/health").permitAll()
@@ -56,6 +62,8 @@ public class SecurityConfig {
 
     @Bean
     public CookieCsrfTokenRepository csrfTokenRepository() {
-        return new CookieCsrfTokenRepository();
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath(cookiePath);
+        return repository;
     }
 }

@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/context'
 import { ErrorMessage, SuccessMessage } from '../components/ErrorMessage'
+import { Spinner } from '../components/Spinner'
 import { buttonClasses, inputClasses, labelClasses } from '../components/ui'
 import { AuthCard } from './AuthCard'
 
@@ -12,7 +13,7 @@ interface LocationState {
 }
 
 export function LoginPage() {
-  const { user, login } = useAuth()
+  const { user, waking, login } = useAuth()
   const navigate = useNavigate()
   const state = (useLocation().state ?? {}) as LocationState
   const [username, setUsername] = useState(state.registered ?? '')
@@ -64,6 +65,9 @@ export function LoginPage() {
           <SuccessMessage>Account created. You can sign in now.</SuccessMessage>
         )}
         <ErrorMessage>{error}</ErrorMessage>
+        {waking && !error && (
+          <Spinner label="Waking up the server, this can take up to a minute" />
+        )}
         <div>
           <label htmlFor="username" className={labelClasses}>
             Username

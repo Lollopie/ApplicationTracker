@@ -1,0 +1,54 @@
+# Render Blueprint for the Job Tracker. Both services are reached only through the home site's gateway,
+# which serves example.com/tracker/ (tracker-web) and example.com/tracker/api/* (tracker-api).
+# If Render gives a service a suffixed URL (name already taken), update the gateway rewrites to match.
+services:
+  - type: web
+    name: tracker-api
+    runtime: image
+    plan: free
+    region: frankfurt # keep it next to the Neon database
+    image:
+      # Pushed by CI on every push to main. CI deploys a specific SHA tag through the deploy hook;
+      # this tag is only the default. The package must be public, or add creds (Workspace registry credential).
+      url: ghcr.io/lollopie/applicationtracker:latest
+    healthCheckPath: /actuator/health
+    envVars:
+      # jdbc:postgresql://<neon-host>/<db>?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_USER
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      # {bcrypt}... hash for the seeded admin, see the README
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      # The cookies must be scoped to the gateway prefix and must not clash with the other app's cookies.
+      - key: COOKIE_PATH
+        value: /tracker
+      - key: SESSION_COOKIE_NAME
+        value: JT_SESSION
+      - key: COOKIE_SECURE
+        value: "true"
+      # Serial GC and C1-only JIT suit the free instance's 0.1 CPU and shorten the cold start.
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+
+  - type: web
+    name: tracker-web
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    buildFilter:
+      paths:
+        - frontend/**
+    envVars:
+      - key: VITE_BASE
+        value: /tracker/
+      - key: NODE_VERSION
+        value: "24"
+    routes:
+      # The gateway strips /tracker, so client-side routes arrive here as /applications/... .
+      - type: rewrite
+        source: /*
+        destination: /index.html

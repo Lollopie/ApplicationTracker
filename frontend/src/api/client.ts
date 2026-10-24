@@ -1,6 +1,12 @@
-const API_BASE = '/api'
+import { BASE_PATH } from '../config'
+
+const API_BASE = `${BASE_PATH}/api`
 const CSRF_COOKIE = 'XSRF-TOKEN'
 const CSRF_HEADER = 'X-XSRF-TOKEN'
+// The backend scopes its cookies to the same prefix (COOKIE_PATH), so clearing must use that path too.
+const COOKIE_PATH = BASE_PATH || '/'
+
+const WAKING_UP = 'The server is waking up. This can take up to a minute on the free hosting tier.'
 
 export type FieldErrors = Record<string, string[]>
 
@@ -19,6 +25,14 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * True while the backend can't answer yet: no connection, a gateway error, or the host's
+ * "starting up" page instead of JSON. Worth retrying, unlike 4xx errors.
+ */
+export function isServerUnavailable(error: unknown): boolean {
+  return error instanceof ApiError && [0, 502, 503, 504].includes(error.status)
+}
+
 type UnauthorizedListener = () => void
 let onUnauthorized: UnauthorizedListener | null = null
 
@@ -34,7 +48,11 @@ function readCookie(name: string): string | null {
 }
 
 function clearCsrfCookie() {
-  document.cookie = `${CSRF_COOKIE}=; Max-Age=0; path=/`
+  document.cookie = `${CSRF_COOKIE}=; Max-Age=0; path=${COOKIE_PATH}`
+}
+
+function isJson(response: Response) {
+  return response.headers.get('Content-Type')?.includes('json') ?? false
 }
 
 function url(path: string): string {
@@ -44,7 +62,13 @@ function url(path: string): string {
 
 /** Asks the backend to issue a CSRF cookie. The login response clears it, so call this again after logging in. */
 export async function refreshCsrfToken(): Promise<void> {
-  await fetch(url('/csrf'), { credentials: 'same-origin' })
+  let response: Response
+  try {
+    response = await fetch(url('/csrf'), { credentials: 'same-origin' })
+  } catch {
+    throw new ApiError(0, WAKING_UP)
+  }
+  if ([502, 503, 504].includes(response.status)) throw new ApiError(response.status, WAKING_UP)
 }
 
 async function csrfToken(): Promise<string | null> {
@@ -55,6 +79,10 @@ async function csrfToken(): Promise<string | null> {
 }
 
 async function toApiError(response: Response): Promise<ApiError> {
+  // Gateway errors come from the hosting proxy as HTML, not from Spring.
+  if ([502, 503, 504].includes(response.status) && !isJson(response)) {
+    return new ApiError(response.status, WAKING_UP)
+  }
   let detail = response.statusText || `Request failed with status ${response.status}`
   let fieldErrors: FieldErrors = {}
   try {
@@ -89,6 +117,14 @@ async function send(method: Method, path: string, body: unknown): Promise<Respon
   }
 }
 
+async function parseBody<T>(response: Response): Promise<T> {
+  const text = await response.text()
+  if (!text) return undefined as T
+  // A successful response that isn't JSON is the host's placeholder page while the backend starts.
+  if (!isJson(response)) throw new ApiError(503, WAKING_UP)
+  return JSON.parse(text) as T
+}
+
 export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
   let response = await send(method, path, body)
 
@@ -108,6 +144,5 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
   if (response.status === 204 || response.headers.get('Content-Length') === '0') {
     return undefined as T
   }
-  const text = await response.text()
-  return (text ? JSON.parse(text) : undefined) as T
+  return parseBody<T>(response)
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '../auth/context'
+import { HOME_URL } from '../config'
 
 export function Layout() {
   const { user, logout } = useAuth()
@@ -28,6 +29,12 @@ export function Layout() {
             Job Tracker
           </Link>
           <div className="flex items-center gap-4 text-sm">
+            {HOME_URL && (
+              // A plain link on purpose: the home page lives outside this app's router.
+              <a href={HOME_URL} className="text-slate-600 hover:text-slate-900">
+                Home
+              </a>
+            )}
             <span className="hidden text-slate-600 sm:inline">
               Signed in as <strong className="font-medium text-slate-900">{user?.username}</strong>
             </span>

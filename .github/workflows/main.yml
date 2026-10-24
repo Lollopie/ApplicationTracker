@@ -65,3 +65,11 @@ jobs:
       - name: Push the image
         if: github.event_name == 'push'
         run: docker push --all-tags $IMAGE
+      - name: Deploy the pushed image to Render
+        if: github.event_name == 'push'
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        # Deploys the exact SHA tag that was just tested and pushed, not whatever "latest" points to.
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then echo "RENDER_DEPLOY_HOOK_URL not set, skipping"; exit 0; fi
+          curl -fsS -G --data-urlencode "imgURL=$IMAGE:${GITHUB_SHA::7}" "$RENDER_DEPLOY_HOOK_URL" > /dev/null

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cardClasses } from '../components/ui'
+import { HOME_URL } from '../config'
 
 export function AuthCard({ title, children, footer }: { title: string; children: ReactNode; footer: ReactNode }) {
   return (
@@ -13,6 +14,11 @@ export function AuthCard({ title, children, footer }: { title: string; children:
         {children}
       </div>
       <p className="mt-6 text-sm text-slate-600">{footer}</p>
+      {HOME_URL && (
+        <a href={HOME_URL} className="mt-3 text-sm text-slate-500 hover:text-slate-700">
+          ← Home
+        </a>
+      )}
     </div>
   )
 }

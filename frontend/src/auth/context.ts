@@ -4,6 +4,8 @@ import type { Credentials, Me } from '../api/auth'
 export interface AuthState {
   /** undefined while the session check is still running, null when logged out. */
   user: Me | null | undefined
+  /** True while the session check is retrying because the backend is still starting up. */
+  waking: boolean
   login: (credentials: Credentials) => Promise<void>
   logout: () => Promise<void>
 }

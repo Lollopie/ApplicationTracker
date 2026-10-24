@@ -13,7 +13,7 @@ Built as a learning and portfolio project, with a focus on doing the backend fun
 
 ## Features
 
-- **Session-based authentication:** JSON login, server-side sessions (`JSESSIONID`), session fixation protection, and BCrypt behind a delegating password encoder. The password hash is erased from the session's principal after login.
+- **Session-based authentication:** JSON login, server-side sessions stored in PostgreSQL with Spring Session JDBC (so they survive restarts), session fixation protection, and BCrypt behind a delegating password encoder. The password hash is erased from the session's principal after login.
 - **CSRF protection:** double-submit cookie (`XSRF-TOKEN` cookie plus `X-XSRF-TOKEN` header), with the token rotated on login.
 - **Per-user data isolation:** every query is scoped to the logged-in user. Another user's application returns `404`, not `403`, so the API doesn't reveal that it exists.
 - **Status workflow:** an enum-based state machine with an append-only status history.
@@ -74,6 +74,10 @@ npm run build      # type-check and production build into dist/
 
 Start the backend first (from the IDE, or with `docker compose up postgres spring`).
 
+To serve the app under a path prefix, build it with `VITE_BASE`, for example `VITE_BASE=/tracker/ npm run build`. It then calls the API at `/tracker/api`, and the backend needs `COOKIE_PATH=/tracker`.
+
+`scripts/e2e-smoke.sh` runs a full register → login → CRUD → status workflow → logout pass against a running stack, through the same paths and cookies the SPA uses. Run it after `docker compose up`.
+
 ## API overview
 
 All request and response bodies are JSON. Requests that change state (`POST`, `PUT`, `DELETE`) need a CSRF token.
@@ -130,6 +134,37 @@ SAVED ──► APPLIED ──► INTERVIEW ──► OFFER
 - **Paging in SQL.** The list query pages the applications *before* joining their histories, and `fail_on_pagination_over_collection_fetch` is enabled so in-memory pagination can never slip in unnoticed.
 - **Real Postgres in tests.** The migrations rely on `uuidv7()` and `citext`, so the tests run on PostgreSQL 18 via Testcontainers instead of H2. The schema under test is exactly the production schema, migrated from scratch.
 - **The tested jar is the shipped jar.** CI runs `clean verify`, then builds the Docker image from that same artifact. Images are tagged with the commit SHA (for reproducible deploys) and `latest`.
+- **Path-based hosting with scoped cookies.** In production the app shares one domain with other apps (`example.com/tracker/`). The cookie path and the session cookie name are configurable, so the tracker's cookies never reach or collide with the neighbouring apps. The CSRF filter and the token rotation on login share one cookie repository, so both use the same path.
+
+## Deploying to Render
+
+Production runs on Render's free tier, behind one domain shared with other apps:
+
+| Path | Served by |
+|---|---|
+| `example.com/` | the home page (a Render Static Site in its own repo), which is also the gateway |
+| `example.com/tracker/*` | `tracker-web`, the SPA built with `VITE_BASE=/tracker/` |
+| `example.com/tracker/api/*` | `tracker-api`, the Spring image from GHCR, with the `/tracker/api` prefix stripped |
+
+The home site forwards these paths with Static Site rewrite rules, listed with the API rule first. The gateway is a static site, so it never sleeps.
+
+Setup:
+
+1. **Database:** create a Neon project on **PostgreSQL 18** in the same region as the API (Frankfurt in [`render.yaml`](render.yaml)). Flyway creates the schema on the first start.
+2. **Services:** in Render, create a Blueprint from this repo. It defines both services from [`render.yaml`](render.yaml). When asked, fill in the secrets:
+   - `DATABASE_URL` as `jdbc:postgresql://<neon-host>/<db>?sslmode=require`
+   - `DATABASE_USER`
+   - `DATABASE_PASSWORD`
+   - `ADMIN_PASSWORD_HASH`
+3. **Image access:** make the GHCR package public, or add a registry credential in Render.
+4. **Deploys:** copy `tracker-api`'s deploy hook URL into the GitHub secret `RENDER_DEPLOY_HOOK_URL`. `tracker-web` builds itself on every push that touches `frontend/`.
+5. **Gateway:** in the home site's rewrites, point `/tracker/api/*` and `/tracker/*` at the two services' `onrender.com` URLs.
+
+The backend's `COOKIE_PATH` must match the frontend's `VITE_BASE`, without the trailing slash. Check a deployment with:
+
+```bash
+BASE=https://example.com APP_PREFIX=/tracker CHECK_HEADERS=0 scripts/e2e-smoke.sh
+```
 
 ## CI/CD
 
@@ -139,12 +174,12 @@ The [GitHub Actions workflow](.github/workflows/main.yml) runs on every push and
 2. In parallel, the frontend is linted, tested and built.
 3. A Docker image built from the tested jar, on every run.
 4. On pushes to `main` only, the backend image is pushed to `ghcr.io/lollopie/applicationtracker`, tagged with the short commit SHA and `latest`.
+5. Then the Render deploy hook deploys that exact SHA tag (skipped when the `RENDER_DEPLOY_HOOK_URL` secret isn't set).
 
 ## Known limitations
 
 - There's no rate limiting or brute-force protection on `/login` and `/register`.
-- Sessions are stored in memory, so a restart logs everyone out. Spring Session JDBC would fix that.
-- No public deployment exists at the moment. The image is deployable to any container host that provides a PostgreSQL 18 database.
+- On Render's free tier the API sleeps after 15 idle minutes, and the first request afterwards takes about a minute. The frontend shows a "waking up" message and keeps retrying in the meantime, and sessions survive because they're stored in the database.
 
 ## License
 

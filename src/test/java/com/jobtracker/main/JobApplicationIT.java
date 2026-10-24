@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
+import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 
@@ -126,6 +127,21 @@ public class JobApplicationIT extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody().jsonPath("username").isEqualTo("user");
+    }
+
+    @Test
+    public void sessionIsStoredInDatabase() {
+        testData.scenario().withUser("user", "password");
+        String token = getCsrfToken();
+        ResponseCookie session = loginAndGetSessionCookie(token);
+        // Spring Session's cookie carries the Base64-encoded session id.
+        String sessionId = new String(Base64.getDecoder().decode(session.getValue()));
+        assertEquals("user", jdbcClient.sql("SELECT principal_name FROM spring_session WHERE session_id = ?")
+                .param(sessionId).query(String.class).single());
+        client.get().uri("/me")
+                .cookie(session.getName(), session.getValue())
+                .exchange()
+                .expectStatus().isOk();
     }
 
     @Test

@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { api, csrfHandler, problem, server } from '../test/server'
-import { ApiError, request } from './client'
+import { ApiError, isServerUnavailable, request } from './client'
 
 describe('request', () => {
   it('fetches a CSRF token first when the cookie is missing and sends it as a header', async () => {
@@ -80,6 +80,30 @@ describe('request', () => {
       detail: 'Invalid request content.',
       fieldErrors: { company: ['Company is required'] },
     })
+  })
+
+  it("treats the host's HTML placeholder page as a server that is still waking up", async () => {
+    server.use(http.get(api('/me'), () => HttpResponse.html('<html>Service waking up…</html>')))
+
+    const error = await request('GET', '/me').catch((caught) => caught)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ status: 503 })
+    expect(isServerUnavailable(error)).toBe(true)
+  })
+
+  it('maps gateway errors without a problem body to the waking-up error', async () => {
+    server.use(http.get(api('/me'), () => HttpResponse.html('<html>Bad gateway</html>', { status: 502 })))
+
+    const error = await request('GET', '/me').catch((caught) => caught)
+
+    expect(error).toMatchObject({ status: 502, message: expect.stringContaining('waking up') })
+    expect(isServerUnavailable(error)).toBe(true)
+  })
+
+  it('does not treat client errors as the server being unavailable', async () => {
+    server.use(http.get(api('/me'), () => problem(401, 'Full authentication is required')))
+    expect(isServerUnavailable(await request('GET', '/me').catch((caught) => caught))).toBe(false)
   })
 
   it('reports the 409 detail from the backend', async () => {
