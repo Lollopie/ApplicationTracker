@@ -6,9 +6,15 @@ import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serial;
 import java.util.*;
 
 public class UserDetailModel implements UserDetails, CredentialsContainer {
+
+    // Sessions are serialized into spring_session, so a fixed UID keeps them readable across deploys.
+    // Only change it on purpose, when old sessions must be invalidated.
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private final UUID id;
     private final String username;

@@ -43,7 +43,7 @@ jobs:
     permissions:
       packages: write
       contents: read
-    needs: test_backend
+    needs: [test_backend, test_frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

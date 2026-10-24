@@ -15,11 +15,16 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Behind the path-based gateway the cookies must be scoped to the app's prefix and must not use the default names. */
+/**
+ * The production cookie settings from render.yaml: behind the path-based gateway the cookies must be scoped
+ * to the app's prefix, must not use the default names, and the session cookie must only travel over HTTPS.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "COOKIE_PATH=/tracker",
-        "SESSION_COOKIE_NAME=JT_SESSION"
+        "SESSION_COOKIE_NAME=JT_SESSION",
+        "COOKIE_SECURE=true"
 })
 @AutoConfigureRestTestClient
 @ActiveProfiles("test")
@@ -60,5 +65,23 @@ public class CookiePathIT extends AbstractIntegrationTest {
         ResponseCookie clearedCsrf = Objects.requireNonNull(login.getResponseCookies().getFirst("XSRF-TOKEN"));
         assertEquals("/tracker", clearedCsrf.getPath());
         assertEquals(0, clearedCsrf.getMaxAge().getSeconds());
+    }
+
+    @Test
+    public void sessionCookieIsSecureAndHttpOnly() {
+        testData.scenario().withUser("user", "password");
+        var csrf = client.get().uri("/csrf").exchange().returnResult(Void.class);
+        String token = Objects.requireNonNull(csrf.getResponseCookies().getFirst("XSRF-TOKEN")).getValue();
+        var login = client.post().uri("/login")
+                .cookie("XSRF-TOKEN", token)
+                .header("X-XSRF-TOKEN", token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new LoginDto("user", "password"))
+                .exchange()
+                .expectStatus().isOk()
+                .returnResult(Void.class);
+        ResponseCookie session = Objects.requireNonNull(login.getResponseCookies().getFirst("JT_SESSION"));
+        assertTrue(session.isSecure());
+        assertTrue(session.isHttpOnly());
     }
 }

@@ -76,6 +76,8 @@ Start the backend first (from the IDE, or with `docker compose up postgres sprin
 
 To serve the app under a path prefix, build it with `VITE_BASE`, for example `VITE_BASE=/tracker/ npm run build`. It then calls the API at `/tracker/api`, and the backend needs `COOKIE_PATH=/tracker`.
 
+On a host that puts the backend to sleep when idle, build with `VITE_SERVER_SLEEPS=true` (as [`render.yaml`](render.yaml) does). The SPA then treats gateway errors as "waking up" and keeps retrying the session check for about two minutes. Without it, a gateway error means the backend isn't running, so the SPA gives up after a few seconds and doesn't mention waking up.
+
 `scripts/e2e-smoke.sh` runs a full register → login → CRUD → status workflow → logout pass against a running stack, through the same paths and cookies the SPA uses. Run it after `docker compose up`.
 
 ## API overview

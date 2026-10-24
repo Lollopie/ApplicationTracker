@@ -1,11 +1,21 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import * as authApi from '../api/auth'
-import { ApiError, isServerUnavailable, setUnauthorizedListener } from '../api/client'
+import { ApiError, isNetworkError, isServerUnavailable, setUnauthorizedListener } from '../api/client'
+import { SERVER_SLEEPS } from '../config'
 import { queryKeys } from '../queryClient'
 import { AuthContext, type AuthState } from './context'
 
+// A sleeping free-tier backend takes about a minute to wake up: keep trying for roughly two minutes.
+// Elsewhere a gateway error means the backend is down, so give up after a few seconds.
 const WAKE_UP_RETRIES = 25
+const UNAVAILABLE_RETRIES = 3
+const NETWORK_RETRIES = 2
+
+function retrySession(failureCount: number, error: Error): boolean {
+  if (isServerUnavailable(error)) return failureCount < (SERVER_SLEEPS ? WAKE_UP_RETRIES : UNAVAILABLE_RETRIES)
+  return isNetworkError(error) && failureCount < NETWORK_RETRIES
+}
 
 async function fetchSession(): Promise<authApi.Me | null> {
   try {
@@ -22,8 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: queryKeys.me,
     queryFn: fetchSession,
     staleTime: Infinity,
-    // A free-tier backend takes about a minute to wake up: keep trying for roughly two minutes.
-    retry: (failureCount, error) => isServerUnavailable(error) && failureCount < WAKE_UP_RETRIES,
+    retry: retrySession,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
   })
   const waking = user === undefined && !isError && isServerUnavailable(failureReason)

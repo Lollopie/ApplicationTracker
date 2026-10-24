@@ -1,7 +1,8 @@
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
+import { testConfig } from '../test/config'
 import { api, csrfHandler, problem, server } from '../test/server'
-import { ApiError, isServerUnavailable, request } from './client'
+import { ApiError, isNetworkError, isServerUnavailable, request } from './client'
 
 describe('request', () => {
   it('fetches a CSRF token first when the cookie is missing and sends it as a header', async () => {
@@ -92,13 +93,46 @@ describe('request', () => {
     expect(isServerUnavailable(error)).toBe(true)
   })
 
-  it('maps gateway errors without a problem body to the waking-up error', async () => {
+  it('maps gateway errors without a problem body to the waking-up error on a host that sleeps', async () => {
+    testConfig.serverSleeps = true
     server.use(http.get(api('/me'), () => HttpResponse.html('<html>Bad gateway</html>', { status: 502 })))
 
     const error = await request('GET', '/me').catch((caught) => caught)
 
     expect(error).toMatchObject({ status: 502, message: expect.stringContaining('waking up') })
     expect(isServerUnavailable(error)).toBe(true)
+  })
+
+  it('does not promise a wake-up for gateway errors elsewhere', async () => {
+    // What the Vite dev proxy answers when the backend isn't running.
+    server.use(http.get(api('/me'), () => HttpResponse.text('', { status: 502 })))
+
+    const error = await request('GET', '/me').catch((caught) => caught)
+
+    expect(error).toMatchObject({ status: 502, message: 'The server is unavailable right now. Try again in a moment.' })
+    expect(isServerUnavailable(error)).toBe(true)
+  })
+
+  it('reports a failed connection as a network error, not as the server waking up', async () => {
+    testConfig.serverSleeps = true
+    server.use(http.get(api('/me'), () => HttpResponse.error()))
+
+    const error = await request('GET', '/me').catch((caught) => caught)
+
+    expect(error).toMatchObject({ status: 0, message: expect.stringContaining('Check your connection') })
+    expect(isNetworkError(error)).toBe(true)
+    expect(isServerUnavailable(error)).toBe(false)
+  })
+
+  it('reports a failed connection while fetching the CSRF token as a network error', async () => {
+    server.use(
+      http.get(api('/csrf'), () => HttpResponse.error()),
+      http.post(api('/applications'), () => HttpResponse.json({ id: '1' }, { status: 201 })),
+    )
+
+    const error = await request('POST', '/applications', {}).catch((caught) => caught)
+
+    expect(error).toMatchObject({ status: 0, message: expect.stringContaining('Check your connection') })
   })
 
   it('does not treat client errors as the server being unavailable', async () => {

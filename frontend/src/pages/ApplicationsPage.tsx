@@ -45,6 +45,14 @@ function useDebouncedSearchParam(name: string, delay = 300) {
   const [searchParams, setSearchParams] = useSearchParams()
   const urlValue = searchParams.get(name) ?? ''
   const [value, setValue] = useState(urlValue)
+  const [lastUrlValue, setLastUrlValue] = useState(urlValue)
+
+  // Back/forward or a link changed the URL: show its value. Our own debounced write lands here too,
+  // with the value already typed, so it doesn't overwrite anything.
+  if (urlValue !== lastUrlValue) {
+    setLastUrlValue(urlValue)
+    setValue(urlValue)
+  }
 
   useEffect(() => {
     if (value === urlValue) return

@@ -1,4 +1,4 @@
-import { BASE_PATH } from '../config'
+import { BASE_PATH, SERVER_SLEEPS } from '../config'
 
 const API_BASE = `${BASE_PATH}/api`
 const CSRF_COOKIE = 'XSRF-TOKEN'
@@ -7,6 +7,8 @@ const CSRF_HEADER = 'X-XSRF-TOKEN'
 const COOKIE_PATH = BASE_PATH || '/'
 
 const WAKING_UP = 'The server is waking up. This can take up to a minute on the free hosting tier.'
+const UNAVAILABLE = 'The server is unavailable right now. Try again in a moment.'
+const NETWORK_ERROR = 'Could not reach the server. Check your connection and try again.'
 
 export type FieldErrors = Record<string, string[]>
 
@@ -26,11 +28,23 @@ export class ApiError extends Error {
 }
 
 /**
- * True while the backend can't answer yet: no connection, a gateway error, or the host's
- * "starting up" page instead of JSON. Worth retrying, unlike 4xx errors.
+ * True while the backend can't answer: a gateway error, or the host's "starting up" page instead of JSON.
+ * Worth retrying, unlike 4xx errors. A failed connection is not included, see isNetworkError.
  */
 export function isServerUnavailable(error: unknown): boolean {
-  return error instanceof ApiError && [0, 502, 503, 504].includes(error.status)
+  return error instanceof ApiError && [502, 503, 504].includes(error.status)
+}
+
+/**
+ * True when the request never reached the gateway. The gateway is a static site that never sleeps,
+ * so this means the user is offline, not that the backend is waking up.
+ */
+export function isNetworkError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 0
+}
+
+function unavailable(status: number) {
+  return new ApiError(status, SERVER_SLEEPS ? WAKING_UP : UNAVAILABLE)
 }
 
 type UnauthorizedListener = () => void
@@ -66,9 +80,9 @@ export async function refreshCsrfToken(): Promise<void> {
   try {
     response = await fetch(url('/csrf'), { credentials: 'same-origin' })
   } catch {
-    throw new ApiError(0, WAKING_UP)
+    throw new ApiError(0, NETWORK_ERROR)
   }
-  if ([502, 503, 504].includes(response.status)) throw new ApiError(response.status, WAKING_UP)
+  if ([502, 503, 504].includes(response.status)) throw unavailable(response.status)
 }
 
 async function csrfToken(): Promise<string | null> {
@@ -81,7 +95,7 @@ async function csrfToken(): Promise<string | null> {
 async function toApiError(response: Response): Promise<ApiError> {
   // Gateway errors come from the hosting proxy as HTML, not from Spring.
   if ([502, 503, 504].includes(response.status) && !isJson(response)) {
-    return new ApiError(response.status, WAKING_UP)
+    return unavailable(response.status)
   }
   let detail = response.statusText || `Request failed with status ${response.status}`
   let fieldErrors: FieldErrors = {}
@@ -113,7 +127,7 @@ async function send(method: Method, path: string, body: unknown): Promise<Respon
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
-    throw new ApiError(0, 'Could not reach the server. Check your connection and try again.')
+    throw new ApiError(0, NETWORK_ERROR)
   }
 }
 
@@ -121,7 +135,7 @@ async function parseBody<T>(response: Response): Promise<T> {
   const text = await response.text()
   if (!text) return undefined as T
   // A successful response that isn't JSON is the host's placeholder page while the backend starts.
-  if (!isJson(response)) throw new ApiError(503, WAKING_UP)
+  if (!isJson(response)) throw unavailable(503)
   return JSON.parse(text) as T
 }
 

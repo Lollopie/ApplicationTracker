@@ -1,6 +1,7 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { Link } from 'react-router'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { JobApplication, Page } from '../api/applications'
 import { api, server } from '../test/server'
@@ -73,5 +74,42 @@ describe('ApplicationsPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /Company/ }))
     await screen.findByText('No applications match these filters.')
     expect(queries.at(-1)).toBe('?currentStatus=OFFER&sort=company%2Cdesc&page=0&size=20')
+  })
+
+  it('filters by company after the user stops typing', async () => {
+    const queries: string[] = []
+    server.use(
+      http.get(api('/applications'), ({ request }) => {
+        queries.push(new URL(request.url).search)
+        return HttpResponse.json(page)
+      }),
+    )
+    renderPage(<ApplicationsPage />, { path: '/applications', route: '/applications?page=2' })
+
+    const company = await screen.findByLabelText('Filter by company')
+    await userEvent.type(company, 'Glo')
+
+    // One request for the finished input, back on the first page.
+    await waitFor(() => expect(queries.at(-1)).toBe('?company=Glo&sort=applicationId%2Cdesc&page=0&size=20'))
+    expect(queries.filter((query) => query.includes('company=G'))).toHaveLength(1)
+    expect(company).toHaveValue('Glo')
+  })
+
+  it('shows the filter from the URL when it changes from outside, e.g. with the back button', async () => {
+    server.use(http.get(api('/applications'), () => HttpResponse.json(page)))
+    renderPage(
+      <>
+        <ApplicationsPage />
+        <Link to="/applications?company=Globex">Globex only</Link>
+      </>,
+      { path: '/applications', route: '/applications?company=Acme' },
+    )
+
+    const company = await screen.findByLabelText('Filter by company')
+    expect(company).toHaveValue('Acme')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Globex only' }))
+
+    expect(company).toHaveValue('Globex')
   })
 })

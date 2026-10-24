@@ -145,6 +145,27 @@ public class JobApplicationIT extends AbstractIntegrationTest {
     }
 
     @Test
+    public void logoutDeletesStoredSession() {
+        testData.scenario().withUser("user", "password");
+        String token = getCsrfToken();
+        ResponseCookie session = loginAndGetSessionCookie(token);
+        String sessionId = new String(Base64.getDecoder().decode(session.getValue()));
+        token = getCsrfToken();
+        client.post().uri("/logout")
+                .cookie("XSRF-TOKEN", token)
+                .cookie(session.getName(), session.getValue())
+                .header("X-XSRF-TOKEN", token)
+                .exchange()
+                .expectStatus().isOk();
+        assertEquals(0, jdbcClient.sql("SELECT count(*) FROM spring_session WHERE session_id = ?")
+                .param(sessionId).query(Long.class).single());
+        client.get().uri("/me")
+                .cookie(session.getName(), session.getValue())
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
     public void meUnauthenticated() {
         client.get().uri("/me")
                 .exchange()

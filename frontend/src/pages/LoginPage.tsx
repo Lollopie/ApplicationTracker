@@ -5,6 +5,7 @@ import { useAuth } from '../auth/context'
 import { ErrorMessage, SuccessMessage } from '../components/ErrorMessage'
 import { Spinner } from '../components/Spinner'
 import { buttonClasses, inputClasses, labelClasses } from '../components/ui'
+import { SERVER_SLEEPS } from '../config'
 import { AuthCard } from './AuthCard'
 
 interface LocationState {
@@ -66,7 +67,9 @@ export function LoginPage() {
         )}
         <ErrorMessage>{error}</ErrorMessage>
         {waking && !error && (
-          <Spinner label="Waking up the server, this can take up to a minute" />
+          <Spinner
+            label={SERVER_SLEEPS ? 'Waking up the server, this can take up to a minute' : 'Reconnecting to the server'}
+          />
         )}
         <div>
           <label htmlFor="username" className={labelClasses}>
