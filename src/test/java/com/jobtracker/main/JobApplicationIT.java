@@ -12,13 +12,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
+import java.util.List;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureRestTestClient
@@ -37,6 +40,9 @@ public class JobApplicationIT extends AbstractIntegrationTest {
 
     @Autowired
     JobApplicationRepository jobApplicationRepository;
+
+    @Autowired
+    JdbcClient jdbcClient;
 
     @BeforeEach
     public void cleanUp() {
@@ -108,6 +114,25 @@ public class JobApplicationIT extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectCookie().exists("JSESSIONID");
+    }
+
+    @Test
+    public void me() {
+        testData.scenario().withUser("user", "password");
+        String token = getCsrfToken();
+        ResponseCookie session = loginAndGetSessionCookie(token);
+        client.get().uri("/me")
+                .cookie(session.getName(), session.getValue())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody().jsonPath("username").isEqualTo("user");
+    }
+
+    @Test
+    public void meUnauthenticated() {
+        client.get().uri("/me")
+                .exchange()
+                .expectStatus().isUnauthorized();
     }
 
     @Test
@@ -221,5 +246,46 @@ public class JobApplicationIT extends AbstractIntegrationTest {
                 .cookie(session.getName(), session.getValue())
                 .exchange()
                 .expectStatus().isNotFound()    ;
+    }
+
+    @Test
+    public void deleteApplication() {
+        TestData.Scenario scenario = testData.scenario().withUser("user", "password")
+                .withApplication("X", "Y", List.of(JobApplicationStatus.SAVED, JobApplicationStatus.APPLIED, JobApplicationStatus.INTERVIEW),
+                        null, null, "user");
+        JobApplication jobApplication = scenario.application();
+        String token = getCsrfToken();
+        ResponseCookie session = loginAndGetSessionCookie(token);
+        token = getCsrfToken();
+        client.delete().uri("/applications/" + jobApplication.getApplicationId())
+                .cookie("XSRF-TOKEN", token)
+                .cookie(session.getName(), session.getValue())
+                .header("X-XSRF-TOKEN", token)
+                .exchange()
+                .expectStatus().isNoContent();
+        client.get().uri("/applications/" + jobApplication.getApplicationId())
+                .cookie(session.getName(), session.getValue())
+                .exchange()
+                .expectStatus().isNotFound();
+        assertEquals(0, jobApplicationRepository.findAll().size());
+        assertEquals(0, jdbcClient.sql("SELECT count(*) FROM status_change").query(Long.class).single());
+    }
+
+    @Test
+    public void twoUserDeleteApplication_returns404() {
+        TestData.Scenario scenario = testData.scenario().withUser("user1")
+                .withUser("user2", "password")
+                .withApplication("X", "Y", JobApplicationStatus.SAVED, null, null, "user1");
+        JobApplication jobApplication = scenario.application();
+        String token = getCsrfToken();
+        ResponseCookie session = loginAndGetSessionCookie(token, "user2", "password");
+        token = getCsrfToken();
+        client.delete().uri("/applications/" + jobApplication.getApplicationId())
+                .cookie("XSRF-TOKEN", token)
+                .cookie(session.getName(), session.getValue())
+                .header("X-XSRF-TOKEN", token)
+                .exchange()
+                .expectStatus().isNotFound();
+        assertTrue(jobApplicationRepository.findById(jobApplication.getApplicationId()).isPresent());
     }
 }

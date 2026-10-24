@@ -36,7 +36,7 @@ cp .env.example .env        # then fill in your own values
 docker compose up --build
 ```
 
-The API is then available at `http://localhost:8080`. You can check it with `GET /actuator/health`.
+The API is then available at `http://localhost:8080`, and the web frontend at `http://localhost:3000`. You can check the API with `GET /actuator/health`.
 
 The admin password hash in `.env` must be a BCrypt hash prefixed with `{bcrypt}`, for example:
 
@@ -57,6 +57,23 @@ Provide the same variables (`DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`
 ./mvnw verify   # also runs the integration tests (*IT) against PostgreSQL 18 via Testcontainers
 ```
 
+## Frontend
+
+A React single-page app lives in [`frontend/`](frontend): Vite, React 19, TypeScript, React Router, TanStack Query and Tailwind CSS. It covers registration, login, the filterable and sortable application list, creating and editing applications, the status workflow with its history, and deletion.
+
+The SPA calls the API under `/api`, and a proxy strips that prefix before forwarding to Spring. The browser only ever talks to one origin, so the session and CSRF cookies work without any CORS configuration, and the SPA's routes (`/login`, `/applications/...`) never collide with the API's paths. The Vite dev server is the proxy during development, and nginx is the proxy in the Compose setup.
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:5173, proxies /api to the backend on localhost:8080
+npm test           # Vitest + Testing Library + MSW
+npm run lint       # oxlint
+npm run build      # type-check and production build into dist/
+```
+
+Start the backend first (from the IDE, or with `docker compose up postgres spring`).
+
 ## API overview
 
 All request and response bodies are JSON. Requests that change state (`POST`, `PUT`, `DELETE`) need a CSRF token.
@@ -67,7 +84,8 @@ All request and response bodies are JSON. Requests that change state (`POST`, `P
 2. `POST /register` with `{ "username": "...", "password": "..." }` returns `201`, or `409` if the username is taken. Usernames are 1 to 32 characters (letters, digits, `.`, `_` and `-`), and passwords are 8 to 64 characters.
 3. `POST /login` with the same body returns `200` and a `JSESSIONID` cookie. Login only checks that both fields are present, so tightening the registration rules later can't lock out existing users.
 4. The CSRF token changes on login, so call `GET /csrf` again before your next state-changing request.
-5. `POST /logout` ends the session.
+5. `GET /me` returns `{ "username": "..." }` for the logged-in user, or `401` without a valid session.
+6. `POST /logout` ends the session.
 
 Send the cookies back with every request, and send the `XSRF-TOKEN` cookie's value in the `X-XSRF-TOKEN` header.
 
@@ -118,8 +136,9 @@ SAVED ──► APPLIED ──► INTERVIEW ──► OFFER
 The [GitHub Actions workflow](.github/workflows/main.yml) runs on every push and pull request to `main`:
 
 1. `./mvnw clean verify`, which runs all tests including the Testcontainers integration tests.
-2. A Docker image built from the tested jar, on every run.
-3. On pushes to `main` only, the image is pushed to `ghcr.io/lollopie/applicationtracker`, tagged with the short commit SHA and `latest`.
+2. In parallel, the frontend is linted, tested and built.
+3. A Docker image built from the tested jar, on every run.
+4. On pushes to `main` only, the backend image is pushed to `ghcr.io/lollopie/applicationtracker`, tagged with the short commit SHA and `latest`.
 
 ## Known limitations
 

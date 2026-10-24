@@ -33,6 +33,7 @@ public class SecurityConfig {
                         .requestMatchers("/applications/**").authenticated()
                         .requestMatchers("/error/**").permitAll()
                         .requestMatchers("/logout").authenticated()
+                        .requestMatchers("/me").authenticated()
                         .requestMatchers("/csrf").permitAll()
                         .anyRequest().denyAll()
                 )

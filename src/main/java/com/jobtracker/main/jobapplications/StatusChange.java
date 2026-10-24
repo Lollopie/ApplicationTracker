@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import org.hibernate.generator.EventType;
 
 import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -40,6 +42,7 @@ public class StatusChange {
     private UUID id;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="application_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private JobApplication jobApplication;
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
