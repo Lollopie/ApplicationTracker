@@ -39,7 +39,11 @@ check() {
 echo "Target: $BASE  app: ${APP_PREFIX:-/}  api: $API_PREFIX"
 echo "SPA"
 check "index.html is served" "$(curl -s "$BASE$APP_PREFIX/" | grep -o '<title>Job Tracker</title>')" "<title>Job Tracker</title>"
-check "deep link falls back to the SPA" "$(curl -s -o /dev/null -w '%{http_code}' "$BASE$APP_PREFIX/applications/x")" 200
+# The body matters, not just the status: a broken rewrite can answer 200 with an empty page.
+for route in /applications /applications/x /applications/new /login /register; do
+  check "deep link $route serves the SPA" \
+    "$(curl -s "$BASE$APP_PREFIX$route" | grep -o '<title>Job Tracker</title>')" "<title>Job Tracker</title>"
+done
 ASSET=$(curl -s "$BASE$APP_PREFIX/" | grep -o "$APP_PREFIX/assets/[^\"]*\.js" | head -1)
 check "bundle is served under the prefix" "$(curl -s -o /dev/null -w '%{http_code}' "$BASE$ASSET")" 200
 if [ "$CHECK_HEADERS" = 1 ]; then
@@ -69,6 +73,8 @@ check "login clears the CSRF cookie at $COOKIE_PATH" \
 sed -i '/\tXSRF-TOKEN\t/d' "$JAR"
 csrf;                                               check "fresh CSRF token after login" "$([ -n "$(token)" ] && echo yes)" yes
 call GET /me;                                        check "GET /me -> username" "$(json '.username')" "$USER_NAME"
+call GET /me
+check "API responses are not served from a CDN cache" "$(tr -d '\r' < "$HEADERS" | grep -ci '^cf-cache-status: HIT')" 0
 
 echo "Applications"
 call POST /applications '{"company":" ","position":"Dev","status":"SAVED"}'

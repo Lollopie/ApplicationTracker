@@ -10,6 +10,7 @@ import { RegisterPage } from './pages/RegisterPage'
 
 export function App() {
   return (
+    // Render serves these paths through rewrites listed one by one in render.yaml: add new top-level routes there too.
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />

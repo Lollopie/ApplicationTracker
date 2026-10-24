@@ -69,12 +69,22 @@ services:
         value: public, max-age=31536000, immutable
     # The build is published under /tracker/ (VITE_BASE), so this site is a complete Job Tracker on its own:
     # https://tracker-web-y2tx.onrender.com/tracker/. The home gateway forwards /tracker/* here unchanged.
+    # No rule may overlap another or match its own destination. With a catch-all /tracker/* → /tracker/index.html,
+    # Render served GET /tracker/api/* from the SPA rule despite the order, and every rewritten response was empty.
     routes:
-      # Order matters: the API rule must come before the SPA fallback that would also match it.
       - type: rewrite
         source: /tracker/api/*
         destination: https://tracker-api-2igk.onrender.com/*
-      # Client-side routes (/tracker/applications/...) all serve the SPA shell.
+      # The SPA's client-side routes (frontend/src/App.tsx), listed one by one. /tracker/ itself is the directory index.
       - type: rewrite
-        source: /tracker/*
+        source: /tracker/login
+        destination: /tracker/index.html
+      - type: rewrite
+        source: /tracker/register
+        destination: /tracker/index.html
+      - type: rewrite
+        source: /tracker/applications
+        destination: /tracker/index.html
+      - type: rewrite
+        source: /tracker/applications/*
         destination: /tracker/index.html
